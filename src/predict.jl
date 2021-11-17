@@ -4,14 +4,14 @@ using FluxArchitectures, Plots
 poollength = 10
 horizon = 15
 datalength = 1000
-input, target = get_data(:exchange_rate, poollength, datalength, horizon) |> gpu
+input, target = get_data(:exchange_rate, poollength, datalength, horizon)
 
 @info "Creating model and loss"
 inputsize = size(input, 1)
 convlayersize = 2
 recurlayersize = 3
-skiplength = 120
-model = LSTnet(inputsize, convlayersize, recurlayersize, poollength, skiplength, init=Flux.zeros32, initW=Flux.zeros32) |> gpu
+skiplength = 240
+model = LSTnet(inputsize, convlayersize, recurlayersize, poollength, skiplength, init=Flux.zeros32, initW=Flux.zeros32)
 
 function loss(x, y)
     Flux.reset!(model)
@@ -29,5 +29,6 @@ end
 
 @info "Start loss" loss = loss(input, target)
 @info "Starting training"
-Flux.train!(loss, Flux.params(model),Iterators.repeated((input, target), 20), ADAM(0.01), cb=cb)
+Flux.train!(loss, Flux.params(model),Iterators.repeated((input, target), 80), ADAM(0.01), cb=cb)
+Flux.train!(loss, Flux.params(model),Iterators.repeated((input, target), 80), ADAM(0.01), cb=cb)
 @info "Final loss" loss = loss(input, target)
