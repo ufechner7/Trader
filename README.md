@@ -20,10 +20,14 @@ https://sdobber.github.io/FA_LSTNet/
     Conda.pip("install", "python-bitvavo-api")
 
 ### TODO
-1. create Bitbucket repo
+1. implement recording of market data
+2. get bitcoin data set
+3. write predictor in Julia
 
 ### DONE
 1. write a script that monitors the price of n coins once per 5s
+2. create Bitbucket repo
+3. follow tutorial on prediction
 
 ### Rules
 1. - determine highest price in last month
