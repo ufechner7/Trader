@@ -14,8 +14,8 @@ https://medium.com/datathings/recurrent-lstm-layers-explained-in-a-simple-way-d6
 https://sdobber.github.io/FA_LSTNet/
 
 ## Installation
-    use PyCall
-    use Conda
+    using PyCall
+    using Conda
     Conda.pip_interop(true)
     Conda.pip("install", "python-bitvavo-api")
 
