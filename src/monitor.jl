@@ -1,13 +1,14 @@
 using PyCall, Printf
 
 # TODO: 
-# - generate unique log files
-# - log the data
+# 1. refactoring (functions plus main)
+# 2. write a function that reads all markets
 
 bi = pyimport("python_bitvavo_api.bitvavo")
 
 MARKETS= ["BTC-EUR","CHR-EUR","ETH-EUR", "HNT-EUR", "JST-EUR", "LTO-EUR"]
 PRICES = [57489, 1.1399, 4111, 44.465, 0.079123, 0.6538]
+LAST_TIME = Int(round(time())) - 60
 
 ref="""BTC-EUR,CHR-EUR,ETH-EUR,HNT-EUR,JST-EUR,LTO-EUR
        57489,  1.1399, 4111,   44.465,0.079123,0.6538"""
@@ -21,10 +22,41 @@ SETTINGS = Dict("APIKEY"      => ENV["APIKEY"],
 
 BITVAVO =  bi.Bitvavo(SETTINGS)
 
-function query(bitvavo)
+function fetch_markets(bitvavo)
+    markets = []
+    res = bitvavo.tickerPrice(Dict())
+    for i in 1:length(res)
+        market = res[i]["market"]
+        if occursin("EUR", market)
+            push!(markets, market)
+        end
+    end
+    return markets
+end
+
+function write_header(logfile, markets)
+    j = 1
+    open(logfile, "w") do file
+        for market in markets
+            if j > 1
+                write(file, ",")
+            else
+                write(file, "TIME,")
+            end
+            write(file, market)
+            j += 1
+        end
+        write(file, "\n")
+    end
+end
+
+function query(bitvavo, logfile, markets)
+    global LAST_TIME
     prices = zeros(length(MARKETS))
+    all_prices = zeros(length(markets))
     res = bitvavo.tickerPrice(Dict())
     j = 1
+    k = 1
     for i in 1:length(res)
         market = res[i]["market"]
         if market in MARKETS
@@ -35,41 +67,50 @@ function query(bitvavo)
             @printf "%7.2f %%\n" rel_price
             j += 1
         end
-    end
-    println()
-    j = 1
-    for market in MARKETS
-        if j == 1
-            print(Int(round(time())))
+        if market in markets
+            price = parse(Float64, res[i]["price"])
+            all_prices[k] = price
+            k += 1
         end
-        print(",")
-        price = prices[j]
-        print(price)
-        j += 1
     end
     println()
-end
-
-
-Base.exit_on_sigint(false)
-try
-    j = 1
-    open("data/log.txt", "w") do file
-        for market in MARKETS
-            if j > 1
+    # create a log file entry once per minute
+    now = Int(round(time()))
+    if now > LAST_TIME + 60
+        j = 1
+        open(logfile, "a") do file
+            for market in markets
+                if j == 1
+                    write(file, string(Int(round(time()))))
+                end
                 write(file, ",")
+                price = all_prices[j]
+                write(file, string(price))
+                j += 1
             end
-            write(file, market)
-            j += 1
+            write(file, "\n")
         end
-        write(file, "\n")
+        LAST_TIME = now
     end
-    while true   
-        query(BITVAVO)
-        sleep(5) 
-    end
-catch e
-    @info "interrupt captured!"
 end
+
+function main()
+    Base.exit_on_sigint(false)
+    markets = fetch_markets(BITVAVO)
+    try
+        j = 1
+        logfile = "data/log_" * string(Int(round(time()))) * ".csv"
+        write_header(logfile, markets)
+        while true   
+            query(BITVAVO, logfile, markets)
+            sleep(5) 
+        end
+    catch InterruptException
+        @info "Interrupt captured!"
+    end
+end
+
+# main
+main()
 
 nothing
