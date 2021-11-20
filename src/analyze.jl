@@ -1,4 +1,4 @@
-using CSV, DataFrames, Plotly
+using CSV, DataFrames, Plotly, Dates, TimeZones
 
 # fetch the latest log file from the server
 function fetch_log()
@@ -14,6 +14,9 @@ function read_log()
         push!(new_names, Symbol(replace(header, "-" => "_")))
     end
     rename!(df, new_names)
+    utc_time = unix2datetime(last(df.TIME))
+    local_time = ZonedDateTime(utc_time, TimeZone("Europe/Amsterdam"); from_utc=true) 
+    println("Last entry: ", local_time, "\n")
     return df
 end
 
@@ -54,8 +57,11 @@ function overview(df)
     end
     res = DataFrame(NAME = names(df), CHANGE_1h = CHANGES_1h, CHANGE_24h = CHANGES_24h)
     delete!(res, 1) # delete time entry
-    res = sort!(res, [:CHANGE_1h, :CHANGE_24h], rev=true)
-    first(res, 5)
+    res_hour = sort!(res, [:CHANGE_1h, :CHANGE_24h], rev=true)
+    by_hour = first(res_hour, 5)
+    res_day = sort!(res, [:CHANGE_24h, :CHANGE_1h], rev=true)
+    by_day  = first(res_day, 5)
+    return by_hour, by_day
 end
 
 df = read_log()
