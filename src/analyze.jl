@@ -1,4 +1,10 @@
-using CSV, DataFrames, Plots
+using CSV, DataFrames, Plotly
+
+# fetch the latest log file from the server
+function fetch_log()
+    mycommand = `./fetch_log.sh`
+    run(mycommand)
+end
 
 function read_log()
     df = CSV.read("data/log_1637352719.csv", DataFrame)
@@ -22,6 +28,12 @@ end
 function plot_1h(df, name)
     col     = df[!, name]
     window = col[max((length(col)-60+1), 1):end]
+    plot(window, label=name)
+end
+
+function plot_24h(df, name)
+    col     = df[!, name]
+    window = col[max((length(col)-24*60+1), 1):end]
     plot(window, label=name)
 end
 
