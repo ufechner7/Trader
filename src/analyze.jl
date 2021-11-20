@@ -6,6 +6,14 @@ function fetch_log()
     run(mycommand)
 end
 
+function seconds2human(delta)
+    hours = div(delta, 3600)
+    reminder = mod(delta, 3600)
+    minutes = div(reminder, 60)
+    seconds = mod(reminder, 60) 
+    return Dates.Hour(hours) + Dates.Minute(minutes) + Dates.Second(seconds)
+end
+
 function read_log()
     df = CSV.read("data/log_1637352719.csv", DataFrame)
     new_names=Symbol[]
@@ -14,8 +22,10 @@ function read_log()
         push!(new_names, Symbol(replace(header, "-" => "_")))
     end
     rename!(df, new_names)
+    data_length = last(df.TIME) - first(df.TIME)
     utc_time = unix2datetime(last(df.TIME))
     local_time = ZonedDateTime(utc_time, TimeZone("Europe/Amsterdam"); from_utc=true) 
+    println("Duration:   ", seconds2human(data_length))
     println("Last entry: ", local_time, "\n")
     return df
 end
@@ -65,5 +75,7 @@ function overview(df)
 end
 
 df = read_log()
-ov = overview(df)
+by_hour, by_day = overview(df)
+println(by_hour)
+println(by_day)
 # p1 = plot(df.BTC_EUR, label="BTC_EUR")

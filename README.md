@@ -21,8 +21,6 @@ https://sdobber.github.io/FA_LSTNet/
 
 ### TODO
 1. add simulated auto-trading
-   - print date and time of last update
-   - print total_time
    - calculate 1h drop
    - create trade database; colums: time, market, sell_eur, buy_eur, sell_coins, buy_coins, save_eur, withdraw_eur, total
    - buy when the 1h rise  is above 5%
