@@ -20,15 +20,22 @@ https://sdobber.github.io/FA_LSTNet/
     Conda.pip("install", "python-bitvavo-api")
 
 ### TODO
-
-1. plot bitcoin dataset in julia
-2. re-write bitcoin predictor in Julia
+1. add simulated auto-trading
+   - print date and time of last update
+   - print total_time
+   - calculate 1h drop
+   - create trade database; colums: time, market, sell_eur, buy_eur, sell_coins, buy_coins, save_eur, withdraw_eur, total
+   - buy when the 1h rise  is above 5%
+   - sell when the 1h drop is below -5%
+2. plot bitcoin dataset in julia
+3. re-write bitcoin predictor in Julia
 
 ### DONE
 1. write a script that monitors the price of n coins once per 5s
 2. create Bitbucket repo
 3. follow tutorial on prediction
 4. implement recording of market data
+5. add script analyze.jl
 
 ### Rules
 1. - determine highest price in last month
