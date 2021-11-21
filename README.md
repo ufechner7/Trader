@@ -21,9 +21,9 @@ https://sdobber.github.io/FA_LSTNet/
 
 ### TODO
 1. add simulated auto-trading
-   - calculate 1h drop
-   - create trade database; colums: time, market, sell_eur, buy_eur, sell_coins, buy_coins, save_eur, withdraw_eur, total
-   - buy when the 1h rise  is above 5%
+   - use the course correctly when buying coins
+   - add fields ABS_RISE and ABS_DROP
+   - buy when the 1h rise  is above  5% and drop above -2.5%
    - sell when the 1h drop is below -5%
 2. plot bitcoin dataset in julia
 3. re-write bitcoin predictor in Julia
@@ -34,6 +34,8 @@ https://sdobber.github.io/FA_LSTNet/
 3. follow tutorial on prediction
 4. implement recording of market data
 5. add script analyze.jl
+6. interpolate missing values
+7. create trade database; colums: time, market, sell_eur, buy_eur, sell_coins, buy_coins, save_eur, withdraw_eur, total
 
 ### Rules
 1. - determine highest price in last month
