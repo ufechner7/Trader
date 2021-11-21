@@ -128,7 +128,7 @@ function trade_db(df, save_eur::Float64)
     global INDEX
     t0 = first(df.TIME)
     INDEX=1
-    trade_db = DataFrame(TIME=t0, MARKET = "DEPOSIT", SELL_EUR=0.0, BUY_EUR=0.0, SELL_COINS=0.0, BUY_COINS=0.0, SAVE_EUR=save_eur, WITHDRAW_EUR=0.0, TOTAL=save_eur)
+    trade_db = DataFrame(TIME=t0, MARKET = "DEPOSIT", SELL_EUR=0.0, BUY_EUR=0.0, SELL_COINS=0.0, BUY_COINS=0.0, SAVE_EUR=save_eur, WITHDRAW_EUR=0.0, CASH=save_eur, TOTAL=save_eur)
 end
 
 function calc_cash(df, tdb)
@@ -146,16 +146,16 @@ function calc_cash(df, tdb)
 end
 
 function calc_total(df, tdb)
-    total = 0.0
+    total = last(tdb.CASH)
     for row in eachrow(tdb)
         market = row.MARKET
-        if market=="DEPOSIT"
-            total+=row.SAVE_EUR - row.WITHDRAW_EUR
-        else
+        if market!="DEPOSIT"
             rate = last(df[!, market])
             total+=(row.BUY_COINS - row.SELL_COINS) * rate
         end
+        println(total)
     end
+    println("total :", total)
     return total
 end
 
@@ -167,10 +167,10 @@ function buy(df, tdb, time, market, amount)
     if old_amount < 0.01 && cash >= amount
         rate = last(df[!, market])
 
-        println("Buy: ", market, " rate: ", rate)
+        println("Buy:  ", market, " rate: ", rate)
         coins = amount / rate * FEE
-        total = calc_total(df, tdb) - amount + coins * rate
-        v = [time, market, 0.0, amount, 0.0, coins, 0.0, 0.0, total]
+        total = calc_total(df, tdb) + coins * rate - amount
+        v = [time, market, 0.0, amount, 0.0, coins, 0.0, 0.0, cash-amount, total]
         push!(tdb, v)
     end
 end
@@ -179,16 +179,16 @@ end
 function sell(df, tdb, time, market)
     subset = filter(row -> row.MARKET == market, tdb)
     old_amount = sum(subset.BUY_COINS) - sum(subset.SELL_COINS)
+    cash = calc_cash(df, tdb)
     rate = last(df[!, market])
     println("Sell: ", market, " coins: ", old_amount, " rate: ", rate)
     sell_eur = old_amount * rate
-    total = calc_total(df, tdb) + sell_eur
-    v = [time, market, sell_eur, 0.0, old_amount, 0.0, 0.0, 0.0, total]
+    total = calc_total(df, tdb)
+    v = [time, market, sell_eur, 0.0, old_amount, 0.0, 0.0, 0.0, cash+sell_eur, total]
     push!(tdb, v)
 end
 
-function sell_all(df, tdb)
-    markets = ["MLN_EUR", "ALICE_EUR"]
+function sell_all(df, tdb, markets)
     time = last(df.TIME)
     for market in markets
         sell(df, tdb, time, market)
@@ -219,6 +219,30 @@ function trade(df, n=0)
     for i in 1:n
         check(df, tdb)
     end
+    tdb
+end
+
+function test1(df)
+    markets = ["MLN_EUR"]
+    # markets = ["MLN_EUR"]
+    tdb=trade(df, 30)
+    view = df[1:INDEX, :]
+    sell_all(view, tdb, markets)
+    tdb
+end
+
+function test2(df)
+    markets = ["MLN_EUR", "ALICE_EUR"]
+    tdb=trade(df, 60)
+    view = df[1:INDEX, :]
+    sell_all(view, tdb, markets)
+    tdb
+end
+
+function test3(df)
+    markets = ["MLN_EUR", "ALICE_EUR", "ROSE_EUR", "LRC_EUR", "BSV_EUR", "DNT_EUR", "STORJ_EUR","POWR_EUR","ENJ_EUR","SHIB_EUR"]
+    tdb=trade(df)
+    sell_all(df, tdb, markets)
     tdb
 end
 
