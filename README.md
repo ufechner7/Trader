@@ -21,8 +21,6 @@ https://sdobber.github.io/FA_LSTNet/
 
 ### TODO
 1. add simulated auto-trading
-   - use the course correctly when buying coins
-   - add fields ABS_RISE and ABS_DROP
    - buy when the 1h rise  is above  5% and drop above -2.5%
    - sell when the 1h drop is below -5%
 2. plot bitcoin dataset in julia
