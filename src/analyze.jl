@@ -4,6 +4,8 @@ logfiles=["log_1637352719.csv","log_1637489560.csv"]
 INDEX = 1
 MAX_TRADE = 100.0 # max EUR per trade when buying
 FEE = 1.0 - 0.45/100.0 # 0.45% fee per trade (0.25 fee, 0.2% spread)
+MAX_RISE =  4.0   # buy  if RISE_1h goes above this value [%]
+MIN_DROP = -25.0  # sell if DROP_1h goes below this value [%]
 
 # fetch the latest log file from the server
 function fetch_log()
@@ -165,7 +167,7 @@ function buy(df, tdb, time, market, amount)
     if old_amount < 0.01 && cash >= amount
         rate = last(df[!, market])
 
-        println("Buy:  ", market, " rate: ", rate)
+        # println("Buy:  ", market, " rate: ", rate)
         coins = amount / rate * FEE
         total = calc_total(df, tdb) + coins * rate - amount
         v = [time, market, 0.0, amount, 0.0, coins, 0.0, 0.0, cash-amount, total]
@@ -178,12 +180,25 @@ function sell(df, tdb, time, market)
     subset = filter(row -> row.MARKET == market, tdb)
     old_amount = sum(subset.BUY_COINS) - sum(subset.SELL_COINS)
     cash = calc_cash(df, tdb)
-    rate = last(df[!, market])
-    println("Sell: ", market, " coins: ", old_amount, " rate: ", rate)
-    sell_eur = old_amount * rate
-    total = calc_total(df, tdb)
-    v = [time, market, sell_eur, 0.0, old_amount, 0.0, 0.0, 0.0, cash+sell_eur, total]
-    push!(tdb, v)
+    if old_amount > 0.01
+        rate = last(df[!, market])
+        # println("Sell: ", market, " rate: ", rate)
+        sell_eur = old_amount * rate
+        total = calc_total(df, tdb)
+        v = [time, market, sell_eur, 0.0, old_amount, 0.0, 0.0, 0.0, cash+sell_eur, total]
+        push!(tdb, v)
+    end
+end
+
+function list_markets(tdb)
+    markets=String[]
+    for row in eachrow(tdb)
+        market = row.MARKET
+        if market!="DEPOSIT"
+            push!(markets, market)
+        end
+    end
+    markets
 end
 
 function sell_all(df, tdb, markets)
@@ -200,10 +215,13 @@ function check(df, tdb)
     by_hour, by_day = overview(view)
     # println(by_hour[1,:])
     for row in eachrow(by_hour)
-        if row.RISE_1h >= 5.0
-            market = row.MARKET
-            time = df.TIME[INDEX] + 10          
+        market = row.MARKET
+        time = df.TIME[INDEX] + 10 
+        if row.RISE_1h >= MAX_RISE 
             buy(view, tdb, time, market, MAX_TRADE)
+        end
+        if row.DROP_1h < MIN_DROP
+            sell(df, tdb, time, market)
         end
     end
     INDEX+=1
@@ -238,8 +256,8 @@ function test2(df)
 end
 
 function test3(df)
-    markets = ["ALICE_EUR", "ROSE_EUR", "LRC_EUR", "BSV_EUR", "DNT_EUR", "STORJ_EUR","POWR_EUR","ENJ_EUR","SHIB_EUR","AVAX_EUR"]
     tdb=trade(df)
+    markets = list_markets(tdb)
     sell_all(df, tdb, markets)
     tdb
 end
