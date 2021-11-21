@@ -2,9 +2,9 @@ using CSV, DataFrames, Plotly, Dates, TimeZones, Impute
 
 logfiles=["log_1637352719.csv","log_1637489560.csv"]
 INDEX = 1
-MAX_TRADE = 100.0 # max EUR per trade when buying
+MAX_TRADE = 140.0 # max EUR per trade when buying
 FEE = 1.0 - 0.45/100.0 # 0.45% fee per trade (0.25 fee, 0.2% spread)
-MAX_RISE =  4.0   # buy  if RISE_1h goes above this value [%]
+MAX_RISE =  4.1   # buy  if RISE_1h goes above this value [%]
 MIN_DROP = -25.0  # sell if DROP_1h goes below this value [%]
 
 # fetch the latest log file from the server
@@ -139,7 +139,7 @@ function calc_cash(df, tdb)
         market1 = row.MARKET
         if market1=="DEPOSIT"
             cash += row.SAVE_EUR - row.WITHDRAW_EUR
-        else
+        elseif market1 != ""
             rate1 = last(df[!, market1])
             cash -= (row.BUY_EUR - row.SELL_EUR)
         end
@@ -151,7 +151,7 @@ function calc_total(df, tdb)
     total = last(tdb.CASH)
     for row in eachrow(tdb)
         market = row.MARKET
-        if market!="DEPOSIT"
+        if market!="DEPOSIT" && market != ""
             rate = last(df[!, market])
             total+=(row.BUY_COINS - row.SELL_COINS) * rate
         end
@@ -159,12 +159,12 @@ function calc_total(df, tdb)
     return total
 end
 
-function buy(df, tdb, time, market, amount)
+function buy(df, tdb, time, market, amount, force=false)
     global FEE
     subset = filter(row -> row.MARKET == market, tdb)
     old_amount = sum(subset.BUY_EUR) - sum(subset.SELL_EUR)
     cash = calc_cash(df, tdb)
-    if old_amount < 0.01 && cash >= amount
+    if (old_amount < 0.01 || force) && cash >= amount
         rate = last(df[!, market])
 
         # println("Buy:  ", market, " rate: ", rate)
@@ -173,6 +173,12 @@ function buy(df, tdb, time, market, amount)
         v = [time, market, 0.0, amount, 0.0, coins, 0.0, 0.0, cash-amount, total]
         push!(tdb, v)
     end
+end
+
+function update_total(df, tdb, time)
+    total = calc_total(df, tdb)
+    v = [time, "", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, calc_cash(df, tdb), total]
+    push!(tdb, v)    
 end
 
 # sell all coins of a given market
@@ -208,6 +214,36 @@ function sell_all(df, tdb, markets)
     end
 end
 
+# TODO fix this function for the case that coins were bought more than once from the same market
+function find_performance(view, tdb, time)
+    perf = nothing
+    println(size(tdb))
+    for row in eachrow(tdb)
+        total = 0.0
+        initial = 0.0
+        market = row.MARKET
+        if market!="DEPOSIT" && market != ""
+            # TODO add dictionary for initial and total per market
+            rate = last(view[!, market])
+            initial += row.BUY_EUR
+            total+=(row.BUY_COINS - row.SELL_COINS) * rate
+        end
+        if initial > 0.0 && total > 0.0
+            if market == "LRC_EUR"
+                println("==> ", time, " ", initial, " ", total)
+            end
+            performance = total / initial
+            if isnothing(perf)
+                perf = DataFrame(TIME=time, MARKET = market, PERF=performance)
+            else
+                v = [time, market, performance]
+                push!(perf, v)
+            end
+        end
+    end
+    return perf
+end
+
 function check(df, tdb)
     global INDEX, MAX_TRADE
     # create view to db with the first INDEX rows
@@ -220,8 +256,27 @@ function check(df, tdb)
         if row.RISE_1h >= MAX_RISE 
             buy(view, tdb, time, market, MAX_TRADE)
         end
-        if row.DROP_1h < MIN_DROP
+        if row.DROP_1h < MIN_DROP 
             sell(df, tdb, time, market)
+        end
+
+    end
+    if mod(INDEX, 60) == 0 # every hour
+        time = df.TIME[INDEX]
+        update_total(view, tdb, time)
+    end
+    if mod(INDEX, 60*24) == 0 # every day
+        time = df.TIME[INDEX]
+        perf = find_performance(view, tdb, time)
+        if ! isnothing(perf)
+            sort!(perf, [:PERF], rev=true)
+            println(perf)
+            market = last(perf.MARKET)
+            println("Selling: ", market)
+            sell(view, tdb, time, market)
+            market = first(perf.MARKET)
+            println("Buying: ", market, " time: ", time)
+            buy(view, tdb, time, market, MAX_TRADE, true)
         end
     end
     INDEX+=1
@@ -259,7 +314,12 @@ function test3(df)
     tdb=trade(df)
     markets = list_markets(tdb)
     sell_all(df, tdb, markets)
-    tdb
+    tdb2 = filter(row -> row.MARKET != "", tdb)
+    tdb, tdb2
+end
+
+function plot_total(tdb)
+    plot(tdb.TIME, tdb.TOTAL)
 end
 
 df = read_log()
@@ -268,7 +328,8 @@ if true
     println(by_hour)
     println(by_day)
 else
-    trade(df, 1000)
+    tdb=test3(df)
+    plot_total(tdb)
 end
 
 # create trade data base
