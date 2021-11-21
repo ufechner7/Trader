@@ -127,7 +127,7 @@ function trade_db(df, save_eur::Float64)
     # time, market, sell_eur, buy_eur, sell_coins, buy_coins, save_eur, withdraw_eur, total
     global INDEX
     t0 = first(df.TIME)
-    INDEX=1
+    INDEX = 60
     trade_db = DataFrame(TIME=t0, MARKET = "DEPOSIT", SELL_EUR=0.0, BUY_EUR=0.0, SELL_COINS=0.0, BUY_COINS=0.0, SAVE_EUR=save_eur, WITHDRAW_EUR=0.0, CASH=save_eur, TOTAL=save_eur)
 end
 
@@ -153,9 +153,7 @@ function calc_total(df, tdb)
             rate = last(df[!, market])
             total+=(row.BUY_COINS - row.SELL_COINS) * rate
         end
-        println(total)
     end
-    println("total :", total)
     return total
 end
 
@@ -216,7 +214,7 @@ function trade(df, n=0)
         n = size(df)[1]
     end
     tdb = trade_db(df, 1000.0)
-    for i in 1:n
+    for i in 60:n
         check(df, tdb)
     end
     tdb
@@ -240,7 +238,7 @@ function test2(df)
 end
 
 function test3(df)
-    markets = ["MLN_EUR", "ALICE_EUR", "ROSE_EUR", "LRC_EUR", "BSV_EUR", "DNT_EUR", "STORJ_EUR","POWR_EUR","ENJ_EUR","SHIB_EUR"]
+    markets = ["ALICE_EUR", "ROSE_EUR", "LRC_EUR", "BSV_EUR", "DNT_EUR", "STORJ_EUR","POWR_EUR","ENJ_EUR","SHIB_EUR","AVAX_EUR"]
     tdb=trade(df)
     sell_all(df, tdb, markets)
     tdb
