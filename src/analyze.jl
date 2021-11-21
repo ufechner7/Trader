@@ -1,4 +1,6 @@
-using CSV, DataFrames, Plotly, Dates, TimeZones
+using CSV, DataFrames, Plotly, Dates, TimeZones, Impute
+
+logfiles=["log_1637352719.csv","log_1637489560.csv"]
 
 # fetch the latest log file from the server
 function fetch_log()
@@ -14,8 +16,42 @@ function seconds2human(delta)
     return Dates.Hour(hours) + Dates.Minute(minutes) + Dates.Second(seconds)
 end
 
+function fill_missing(df)
+    t0 = first(df.TIME)
+    t_end = last(df.TIME)
+    t=t0
+    while t <= t_end
+        println(t)
+        t+=60
+    end 
+end
+
 function read_log()
-    df = CSV.read("data/log_1637352719.csv", DataFrame)
+    df = nothing
+    t_end = 0
+    for logfile in logfiles
+        df_new = CSV.read("data/" * logfile, DataFrame)
+        if isnothing(df)
+            df=df_new
+            t_end = last(df.TIME)
+        else
+            t_start = first(df_new.TIME)
+            if (t_start - t_end) > 60
+               n = div(t_start - t_end + 30, 60)
+               v = fill(missing, size(df)[2]-1)
+               println("Missing: ", n, " minutes") 
+               allowmissing!(df)
+               for i in 1:n
+                   v1 = vcat([i*60+t_end], v)
+                   push!(df, v1)
+               end
+            end
+            df = outerjoin(df, df_new, matchmissing=:equal, on = intersect(names(df),  names(df_new)))
+        end
+    end
+    df = Impute.interp(df)
+    disallowmissing!(df)
+
     new_names=Symbol[]
     i = 1
     for header in names(df)
