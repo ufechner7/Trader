@@ -166,8 +166,6 @@ function buy(df, tdb, time, market, amount, force=false)
     cash = calc_cash(df, tdb)
     if (old_amount < 0.01 || force) && cash >= amount
         rate = last(df[!, market])
-
-        # println("Buy:  ", market, " rate: ", rate)
         coins = amount / rate * FEE
         total = calc_total(df, tdb) + coins * rate - amount
         v = [time, market, 0.0, amount, 0.0, coins, 0.0, 0.0, cash-amount, total]
@@ -216,7 +214,6 @@ end
 
 function find_performance(view, tdb, time)
     perf = nothing
-    println(size(tdb))
     dict = nothing
     for row in eachrow(tdb)
         total = 0.0
@@ -258,7 +255,6 @@ function check(df, tdb)
     # create view to db with the first INDEX rows
     view = df[1:INDEX, :]
     by_hour, by_day = overview(view)
-    # println(by_hour[1,:])
     for row in eachrow(by_hour)
         market = row.MARKET
         time = df.TIME[INDEX] + 10 
