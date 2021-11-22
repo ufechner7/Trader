@@ -200,7 +200,7 @@ function list_markets(tdb)
     markets=String[]
     for row in eachrow(tdb)
         market = row.MARKET
-        if market!="DEPOSIT"
+        if market!="DEPOSIT" && !(market in markets)
             push!(markets, market)
         end
     end
@@ -214,24 +214,33 @@ function sell_all(df, tdb, markets)
     end
 end
 
-# TODO fix this function for the case that coins were bought more than once from the same market
 function find_performance(view, tdb, time)
     perf = nothing
     println(size(tdb))
+    dict = nothing
     for row in eachrow(tdb)
         total = 0.0
         initial = 0.0
         market = row.MARKET
         if market!="DEPOSIT" && market != ""
-            # TODO add dictionary for initial and total per market
             rate = last(view[!, market])
             initial += row.BUY_EUR
             total+=(row.BUY_COINS - row.SELL_COINS) * rate
         end
-        if initial > 0.0 && total > 0.0
-            if market == "LRC_EUR"
-                println("==> ", time, " ", initial, " ", total)
+        if isnothing(dict)
+            dict = Dict(market => (initial, total))
+        else
+            if haskey(dict, market)
+                ini,tot = dict[market]
+                dict[market] = (ini + initial, tot +  total)
+            else
+                dict[market] = (initial, total)
             end
+        end
+    end
+    for market in collect(keys(dict))
+        initial, total = dict[market]
+        if initial > 0.001 && total > 0.001
             performance = total / initial
             if isnothing(perf)
                 perf = DataFrame(TIME=time, MARKET = market, PERF=performance)
@@ -265,18 +274,25 @@ function check(df, tdb)
         time = df.TIME[INDEX]
         update_total(view, tdb, time)
     end
-    if mod(INDEX, 60*24) == 0 # every day
+    if mod(INDEX, 60*12) == 0 # every 12h
         time = df.TIME[INDEX]
         perf = find_performance(view, tdb, time)
         if ! isnothing(perf)
             sort!(perf, [:PERF], rev=true)
             println(perf)
             market = last(perf.MARKET)
-            println("Selling: ", market)
-            sell(view, tdb, time, market)
-            market = first(perf.MARKET)
-            println("Buying: ", market, " time: ", time)
-            buy(view, tdb, time, market, MAX_TRADE, true)
+            if last(perf.PERF) < 1.0
+                println("Selling: ", market)
+                sell(view, tdb, time, market)
+                market = first(perf.MARKET)
+                println("Buying: ", market, " time: ", time)
+                cash = calc_cash(view, tdb)
+                if cash >= MAX_TRADE
+                    buy(view, tdb, time, market, MAX_TRADE, true)
+                else
+                    buy(view, tdb, time, market, cash, true)
+                end
+            end
         end
     end
     INDEX+=1
