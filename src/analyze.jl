@@ -1,11 +1,12 @@
 using CSV, DataFrames, Plotly, Dates, TimeZones, Impute
 
-logfiles=["log_1637352719.csv","log_1637489560.csv"]
+LOGFILES=["log_1637352719.csv","log_1637489560.csv","log_1637573477.csv"]
 INDEX = 1
-MAX_TRADE = 140.0 # max EUR per trade when buying
-FEE = 1.0 - 0.45/100.0 # 0.45% fee per trade (0.25 fee, 0.2% spread)
-MAX_RISE =  4.1   # buy  if RISE_1h goes above this value [%]
-MIN_DROP = -25.0  # sell if DROP_1h goes below this value [%]
+START_KAPITAL = 1000.0           # in EUR
+MAX_TRADE     = 140.0            # max EUR per trade when buying
+FEE           = 1.0 - 0.45/100.0 # 0.45% fee per trade (0.25 fee, 0.2% spread)
+MAX_RISE      =  4.1             # buy  if RISE_1h goes above this value [%]
+MIN_DROP      = -25.0            # sell if DROP_1h goes below this value [%]
 
 # fetch the latest log file from the server
 function fetch_log()
@@ -21,7 +22,7 @@ function seconds2human(delta)
     return Dates.Hour(hours) + Dates.Minute(minutes) + Dates.Second(seconds)
 end
 
-function read_log()
+function read_log(logfiles)
     df = nothing
     t_end = 0
     for logfile in logfiles
@@ -42,6 +43,7 @@ function read_log()
                end
             end
             df = outerjoin(df, df_new, matchmissing=:equal, on = intersect(names(df),  names(df_new)))
+            t_end = last(df.TIME)
         end
     end
     df = Impute.interp(df)
@@ -280,13 +282,15 @@ function check(df, tdb)
             if last(perf.PERF) < 1.0
                 println("Selling: ", market)
                 sell(view, tdb, time, market)
-                market = first(perf.MARKET)
-                println("Buying: ", market, " time: ", time)
-                cash = calc_cash(view, tdb)
-                if cash >= MAX_TRADE
-                    buy(view, tdb, time, market, MAX_TRADE, true)
-                else
-                    buy(view, tdb, time, market, cash, true)
+                if true
+                    market = first(perf.MARKET)
+                    println("Buying: ", market, " time: ", time)
+                    cash = calc_cash(view, tdb)
+                    if cash >= MAX_TRADE
+                        buy(view, tdb, time, market, MAX_TRADE, true)
+                    else
+                        buy(view, tdb, time, market, cash, true)
+                    end
                 end
             end
         end
@@ -298,16 +302,31 @@ function trade(df, n=0)
     if n == 0
         n = size(df)[1]
     end
-    tdb = trade_db(df, 1000.0)
+    tdb = trade_db(df, START_KAPITAL)
     for i in 60:n
         check(df, tdb)
     end
     tdb
 end
 
+# interest in percent, duration in seconds
+function yearly_interest(interest, duration)
+    days=duration/(24*3600)
+    years=days/365.0
+    intervalls_per_year = 1.0/years
+    return 100.0*((1 + interest/100.0)^intervalls_per_year - 1.0)
+end
+
+# interest in percent, duration in seconds
+function monthly_interest(interest, duration)
+    days=duration/(24*3600)
+    months=days/30.416666666666668
+    intervalls_per_month = 1.0/months
+    return 100.0*((1 + interest/100.0)^intervalls_per_month - 1.0)
+end
+
 function test1(df)
     markets = ["MLN_EUR"]
-    # markets = ["MLN_EUR"]
     tdb=trade(df, 30)
     view = df[1:INDEX, :]
     sell_all(view, tdb, markets)
@@ -326,19 +345,32 @@ function test3(df, plot=false)
     tdb=trade(df)
     markets = list_markets(tdb)
     sell_all(df, tdb, markets)
+
     if plot
         return plot_total(tdb)
     else
         tdb2 = filter(row -> row.MARKET != "", tdb)
+        interest = (last(tdb.TOTAL)/first(tdb.TOTAL)-1.0)*100.0
+        duration = last(df.TIME) - first(df.TIME)
+        yearly = yearly_interest(interest, duration)
+        monthly = monthly_interest(interest, duration)
+        # println("The interest rate per year is:  ", round(yearly), " %")
+        println("The interest rate per month is: ", round(monthly), " %")
         return tdb2
     end
+end
+
+function test_merge()
+   logfiles = LOGFILES[1:3]
+   df = read_log(logfiles)
+   plot(df.TIME)
 end
 
 function plot_total(tdb)
     plot(tdb.TIME, tdb.TOTAL)
 end
 
-df = read_log()
+df = read_log(LOGFILES)
 if true
     by_hour, by_day = overview(df)
     println(by_hour)
