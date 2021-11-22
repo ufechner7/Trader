@@ -310,12 +310,16 @@ function test2(df)
     tdb
 end
 
-function test3(df)
+function test3(df, plot=false)
     tdb=trade(df)
     markets = list_markets(tdb)
     sell_all(df, tdb, markets)
-    tdb2 = filter(row -> row.MARKET != "", tdb)
-    tdb, tdb2
+    if plot
+        return plot_total(tdb)
+    else
+        tdb2 = filter(row -> row.MARKET != "", tdb)
+        return tdb2
+    end
 end
 
 function plot_total(tdb)
