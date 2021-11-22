@@ -7,6 +7,8 @@ MAX_TRADE     = 140.0            # max EUR per trade when buying
 FEE           = 1.0 - 0.45/100.0 # 0.45% fee per trade (0.25 fee, 0.2% spread)
 MAX_RISE      =  4.1             # buy  if RISE_1h goes above this value [%]
 MIN_DROP      = -25.0            # sell if DROP_1h goes below this value [%]
+MIN_DROP_24   = -35.0            # sell if DROP_24h goes below this value [%]
+WAIT          = 60               # number of minutes to wait before dealing
 
 # fetch the latest log file from the server
 function fetch_log()
@@ -131,7 +133,7 @@ function trade_db(df, save_eur::Float64)
     # time, market, sell_eur, buy_eur, sell_coins, buy_coins, save_eur, withdraw_eur, total
     global INDEX
     t0 = first(df.TIME)
-    INDEX = 60
+    INDEX = WAIT
     trade_db = DataFrame(TIME=t0, MARKET = "DEPOSIT", SELL_EUR=0.0, BUY_EUR=0.0, SELL_COINS=0.0, BUY_COINS=0.0, SAVE_EUR=save_eur, WITHDRAW_EUR=0.0, CASH=save_eur, TOTAL=save_eur)
 end
 
@@ -198,13 +200,20 @@ end
 
 function list_markets(tdb)
     markets=String[]
+    final_markets=String[]
     for row in eachrow(tdb)
         market = row.MARKET
-        if market!="DEPOSIT" && !(market in markets)
+        if market!="DEPOSIT" && !(market in markets) && market !=""
             push!(markets, market)
         end
     end
-    markets
+    for market in markets
+        subset = filter(row -> row.MARKET == market, tdb)
+        if sum(subset.BUY_COINS) - sum(subset.SELL_COINS) > 0.001
+            push!(final_markets, market)
+        end
+    end
+    final_markets
 end
 
 function sell_all(df, tdb, markets)
@@ -260,10 +269,10 @@ function check(df, tdb)
     for row in eachrow(by_hour)
         market = row.MARKET
         time = df.TIME[INDEX] + 10 
-        if row.RISE_1h >= MAX_RISE 
+        if row.RISE_1h >= MAX_RISE && row.DROP_1h == 0.0
             buy(view, tdb, time, market, MAX_TRADE)
         end
-        if row.DROP_1h < MIN_DROP 
+        if row.DROP_1h < MIN_DROP || row.DROP_24h < MIN_DROP_24
             sell(df, tdb, time, market)
         end
 
@@ -303,7 +312,7 @@ function trade(df, n=0)
         n = size(df)[1]
     end
     tdb = trade_db(df, START_KAPITAL)
-    for i in 60:n
+    for i in WAIT:n
         check(df, tdb)
     end
     tdb
@@ -347,7 +356,7 @@ function test3(df, plot=false)
     sell_all(df, tdb, markets)
 
     if plot
-        return plot_total(tdb)
+        return plot_markets(df, tdb, markets)
     else
         tdb2 = filter(row -> row.MARKET != "", tdb)
         interest = (last(tdb.TOTAL)/first(tdb.TOTAL)-1.0)*100.0
@@ -358,6 +367,30 @@ function test3(df, plot=false)
         println("The interest rate per month is: ", round(monthly), " %")
         return tdb2
     end
+end
+
+function plot_markets(df, tdb, markets)
+    p1 = nothing
+    i=1
+    traces=GenericTrace{Dict{Symbol, Any}}[]
+    for market in markets
+        ref = first(df[!, market])
+        trace = scatter(
+            x=df.TIME,
+            y=df[!, markets[i]]/ref,
+            name = markets[i],
+        )
+        push!(traces, trace)
+        i+=1
+    end
+    p1 = plot(traces)
+    p1
+end
+
+function test4(df)
+    tdb=trade(df)
+    markets = list_markets(tdb)
+    plot_markets(df, tdb, markets)
 end
 
 function test_merge()
@@ -380,7 +413,4 @@ else
     plot_total(tdb)
 end
 
-# create trade data base
-# tdb = trade_db(df, 1000.0)
-# check(df, tdb)
 # p1 = plot(df.BTC_EUR, label="BTC_EUR")
