@@ -21,7 +21,6 @@ https://sdobber.github.io/FA_LSTNet/
 
 ### TODO
 1. improve simulated auto-trading
-   - fix function find_performance
    - add plotting of all coins
 2. plot bitcoin dataset in julia
 3. re-write bitcoin predictor in Julia
