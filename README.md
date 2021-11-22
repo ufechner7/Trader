@@ -20,9 +20,9 @@ https://sdobber.github.io/FA_LSTNet/
     Conda.pip("install", "python-bitvavo-api")
 
 ### TODO
-1. add simulated auto-trading
-   - buy when the 1h rise  is above  5% and drop above -2.5%
-   - sell when the 1h drop is below -5%
+1. improve simulated auto-trading
+   - fix function find_performance
+   - add plotting of all coins
 2. plot bitcoin dataset in julia
 3. re-write bitcoin predictor in Julia
 
