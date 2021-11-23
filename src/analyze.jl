@@ -20,6 +20,11 @@ function fetch_log()
     run(mycommand)
 end
 
+function logfiles()
+    files=readdir("data")
+    filter!(files->occursin(r"log_", files), files)
+end
+
 function seconds2human(delta)
     hours = div(delta, 3600)
     reminder = mod(delta, 3600)
@@ -480,7 +485,10 @@ function plot_markets(df, tdb=nothing, markets=nothing)
     nothing
 end
 
-df = read_log(LOGFILES)
+files=readdir("data")
+filter!(files->occursin(r"log_", files), files)
+
+df = read_log(files)
 if true
     by_hour, by_day = overview(df)
     println(by_hour)
