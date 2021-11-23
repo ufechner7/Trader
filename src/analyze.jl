@@ -1,7 +1,7 @@
 using CSV, DataFrames, PyPlot, Dates, TimeZones, Impute, Statistics
 
 LOGFILES = ["log_1637352719.csv","log_1637489560.csv","log_1637573477.csv","log_1637607862.csv",
-"log_1637620607.csv", "log_1637620718.csv","log_1637620921.csv","log_1637621174.csv"]
+"log_1637620607.csv", "log_1637620718.csv","log_1637620921.csv","log_1637621174.csv","log_1637661401.csv"]
 PREFER   = ["AVAX_EUR", "SAND_EUR","VGX_EUR"]
 INDEX = 1
 TDB   = nothing
@@ -36,6 +36,7 @@ function read_log(logfiles)
         if isnothing(df)
             df=df_new
             t_end = last(df.TIME)
+            println("==> ",t_end)
         else
             t_start = first(df_new.TIME)
             if (t_start - t_end) > 60
@@ -50,6 +51,7 @@ function read_log(logfiles)
             end
             df = outerjoin(df, df_new, matchmissing=:equal, on = intersect(names(df),  names(df_new)))
             t_end = last(df.TIME)
+            println("==> ",t_end)
         end
     end
     df = Impute.interp(df)
@@ -419,12 +421,19 @@ function plot_total(df)
     else
         tdb=TDB
     end
-    xlabel("time [h]")
+    xlabel("time [h]" * "               last_updated: " * last_updated(df))
     ylabel("EUR")
     plot((tdb.TIME.-T0)./3600, tdb.TOTAL)
     title("Value of total assets")
     grid("on")
     nothing
+end
+
+function last_updated(df)
+    utc_time = unix2datetime(last(df.TIME))
+    local_time = ZonedDateTime(utc_time, TimeZone("Europe/Amsterdam"); from_utc=true)
+    last_updated = replace(string(local_time), "+01:00" => "")
+    return replace(last_updated, "T" => " ")
 end
 
 function plot_interest(df)
@@ -440,9 +449,10 @@ function plot_interest(df)
     interest = ((tdb.TOTAL)./first(tdb.TOTAL).-1.0).*100.0
     duration = (tdb.TIME) .- first(tdb.TIME)
     monthly = monthly_interest.(interest, duration)
-    xlabel("time [h]")
+   
+    xlabel("time [h]" * "               last_updated: " * last_updated(df))
     plot((tdb.TIME.-T0)./3600, monthly)
-    title("Monthly interest [%]")
+    title("Monthly interest [%]\n")
     grid("on")
 end
 

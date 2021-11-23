@@ -20,10 +20,10 @@ https://sdobber.github.io/FA_LSTNet/
     Conda.pip("install", "python-bitvavo-api")
 
 ### TODO
-1. improve simulated auto-trading
-   - add plotting of all coins
-2. plot bitcoin dataset in julia
-3. re-write bitcoin predictor in Julia
+1. read all data/log*.csv files from Julia
+2. use rsync to get all log files
+3. improve simulated auto-trading
+   - calculate two different averages per coin
 
 ### DONE
 1. write a script that monitors the price of n coins once per 5s
