@@ -432,8 +432,15 @@ function plot_total(df)
     if isnothing(TDB)
         tdb = trade(df, 0, false)
         TDB=tdb
+    else
+        tdb=TDB
     end
+    xlabel("time [h]")
+    ylabel("EUR")
     plot((tdb.TIME.-T0)./3600, tdb.TOTAL)
+    title("Value of total assets")
+    grid("on")
+    nothing
 end
 
 function plot_interest(df)
@@ -441,6 +448,8 @@ function plot_interest(df)
     if isnothing(TDB)
         tdb=trade(df)
         TDB=tdb
+    else
+       tdb=TDB
     end
     markets = list_markets(tdb)
     sell_all(df, tdb, markets)
