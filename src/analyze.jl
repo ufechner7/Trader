@@ -205,7 +205,7 @@ function sell(df, tdb, time, market)
     end
 end
 
-function list_markets(tdb)
+function list_markets(tdb, all=false)
     markets=String[]
     final_markets=String[]
     for row in eachrow(tdb)
@@ -213,6 +213,9 @@ function list_markets(tdb)
         if market!="DEPOSIT" && !(market in markets) && market !=""
             push!(markets, market)
         end
+    end
+    if all
+        return markets
     end
     for market in markets
         subset = filter(row -> row.MARKET == market, tdb)
@@ -382,25 +385,6 @@ function test3(df, plot=false)
     end
 end
 
-function plot_markets(df, tdb, markets)
-    global T0
-    p1 = nothing
-    i=1
-    traces=GenericTrace{Dict{Symbol, Any}}[]
-    for market in markets
-        ref = first(df[!, market])
-        trace = scatter(
-            x=df.TIME .- T0,
-            y=df[!, markets[i]]/ref,
-            name = markets[i],
-        )
-        push!(traces, trace)
-        i+=1
-    end
-    p1 = plot(traces)
-    p1
-end
-
 function test4(df)
     tdb=trade(df)
     markets = list_markets(tdb)
@@ -460,6 +444,30 @@ function plot_interest(df)
     plot((tdb.TIME.-T0)./3600, monthly)
     title("Monthly interest [%]")
     grid("on")
+end
+
+function plot_markets(df, tdb=nothing, markets=nothing)
+    global T0, TDB
+    if isnothing(TDB)
+        tdb=trade(df)
+        TDB=tdb
+    else
+        tdb=TDB
+    end
+    if isnothing(markets)
+        markets = list_markets(tdb, true)
+    end
+    x=(df.TIME .- T0)./360
+    xlabel("time [h]")
+    ylabel("performance [%]")
+    for market in markets
+        ref = first(df[!, market])
+        y=((df[!, market]/ref).-1.0) .* 100.0
+        plot(x, y, label = market)
+    end
+    legend(loc="upper left")
+    grid("on")
+    nothing
 end
 
 df = read_log(LOGFILES)
