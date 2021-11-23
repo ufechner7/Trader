@@ -1,8 +1,10 @@
-using CSV, DataFrames, Plotly, Dates, TimeZones, Impute, Statistics
+using CSV, DataFrames, PyPlot, Dates, TimeZones, Impute, Statistics
 
-LOGFILES = ["log_1637352719.csv","log_1637489560.csv","log_1637573477.csv","log_1637607862.csv"]
+LOGFILES = ["log_1637352719.csv","log_1637489560.csv","log_1637573477.csv","log_1637607862.csv",
+"log_1637620607.csv", "log_1637620718.csv","log_1637620921.csv","log_1637621174.csv"]
 PREFER   = ["AVAX_EUR", "SAND_EUR","VGX_EUR"]
 INDEX = 1
+TDB   = nothing
 START_KAPITAL = 1000.0           # in EUR
 MAX_TRADE     = 140.0            # max EUR per trade when buying
 FEE           = 1.0 - 0.45/100.0 # 0.45% fee per trade (0.25 fee, 0.2% spread)
@@ -426,8 +428,29 @@ function test_merge()
 end
 
 function plot_total(df)
-    tdb = trade(df, 0, false)
-    plot(tdb.TIME, tdb.TOTAL)
+    global TDB
+    if isnothing(TDB)
+        tdb = trade(df, 0, false)
+        TDB=tdb
+    end
+    plot((tdb.TIME.-T0)./3600, tdb.TOTAL)
+end
+
+function plot_interest(df)
+    global TDB
+    if isnothing(TDB)
+        tdb=trade(df)
+        TDB=tdb
+    end
+    markets = list_markets(tdb)
+    sell_all(df, tdb, markets)
+    interest = ((tdb.TOTAL)./first(tdb.TOTAL).-1.0).*100.0
+    duration = (tdb.TIME) .- first(tdb.TIME)
+    monthly = monthly_interest.(interest, duration)
+    xlabel("time [h]")
+    plot((tdb.TIME.-T0)./3600, monthly)
+    title("Monthly interest [%]")
+    grid("on")
 end
 
 df = read_log(LOGFILES)
