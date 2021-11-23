@@ -20,9 +20,8 @@ https://sdobber.github.io/FA_LSTNet/
     Conda.pip("install", "python-bitvavo-api")
 
 ### TODO
-1. read all data/log*.csv files from Julia
-2. use rsync to get all log files
-3. improve simulated auto-trading
+1. plot portefeuille 
+2. improve simulated auto-trading
    - calculate two different averages per coin
 
 ### DONE
