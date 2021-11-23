@@ -22,7 +22,14 @@ end
 
 function logfiles()
     files=readdir("data")
-    filter!(files->occursin(r"log_", files), files)
+    filter!(files -> occursin(r"log_", files), files)
+    non_empty_files = String[]
+    for file in files
+        if stat("data/" * file).size > 2000
+            push!(non_empty_files, file)
+        end
+    end
+    non_empty_files
 end
 
 function seconds2human(delta)
@@ -180,13 +187,15 @@ function buy(df, tdb, time, market, amount, force=false)
     subset = filter(row -> row.MARKET == market, tdb)
     old_amount = sum(subset.BUY_EUR) - sum(subset.SELL_EUR)
     cash = calc_cash(df, tdb)
-    if (old_amount < 0.01 || force) && cash >= amount
+    if (old_amount < 0.01 || force && old_amount <= MAX_TRADE + 0.01) && cash >= amount
         rate = last(df[!, market])
         coins = amount / rate * FEE
         total = calc_total(df, tdb) + coins * rate - amount
         v = [time, time-T0, market, 0.0, amount, 0.0, coins, 0.0, 0.0, cash-amount, total]
         push!(tdb, v)
+        return true
     end
+    return false
 end
 
 function update_total(df, tdb, time)
@@ -310,12 +319,15 @@ function check(df, tdb, prn=true)
                 sell(view, tdb, time, market)
                 market = first(perf.MARKET)
                 if first(perf.PERF) > 1.0
-                    if prn println("Buying: ", market, " time: ", time) end
                     cash = calc_cash(view, tdb)
+                    amount_to_use = cash
                     if cash >= MAX_TRADE
-                        buy(view, tdb, time, market, MAX_TRADE, true)
+                        amount_to_use = MAX_TRADE
+                    end
+                    if buy(view, tdb, time, market, amount_to_use, true)
+                       if prn println("Buying: ", market, " time: ", time) end
                     else
-                        buy(view, tdb, time, market, cash, true)
+                        if prn println("NOT buying: ", market, " time: ", time) end
                     end
                 end
             end
@@ -413,7 +425,7 @@ function test5(df)
 end
 
 function test_merge()
-   logfiles = LOGFILES[1:3]
+   logfiles = LOGFILES["". ""]
    df = read_log(logfiles)
    plot(df.TIME)
 end
@@ -485,10 +497,7 @@ function plot_markets(df, tdb=nothing, markets=nothing)
     nothing
 end
 
-files=readdir("data")
-filter!(files->occursin(r"log_", files), files)
-
-df = read_log(files)
+df = read_log(logfiles())
 if true
     by_hour, by_day = overview(df)
     println(by_hour)
