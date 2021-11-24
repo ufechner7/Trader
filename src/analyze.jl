@@ -1,8 +1,9 @@
-using CSV, DataFrames, PyPlot, Dates, TimeZones, Impute, Statistics
+using CSV, DataFrames, PyPlot, Dates, TimeZones, Impute, Statistics, GLM
 
 LOGFILES = ["log_1637352719.csv","log_1637489560.csv","log_1637573477.csv","log_1637607862.csv",
 "log_1637620607.csv", "log_1637620718.csv","log_1637620921.csv","log_1637621174.csv","log_1637661401.csv"]
 PREFER   = ["AVAX_EUR", "SAND_EUR","VGX_EUR"]
+# PREFER=[]
 INDEX = 1
 TDB   = nothing
 START_KAPITAL = 1000.0           # in EUR
@@ -41,6 +42,7 @@ function seconds2human(delta)
 end
 
 function read_log(logfiles)
+    global T0
     df = nothing
     t_end = 0
     for logfile in logfiles
@@ -48,7 +50,6 @@ function read_log(logfiles)
         if isnothing(df)
             df=df_new
             t_end = last(df.TIME)
-            println("==> ",t_end)
         else
             t_start = first(df_new.TIME)
             if (t_start - t_end) > 60
@@ -63,7 +64,6 @@ function read_log(logfiles)
             end
             df = outerjoin(df, df_new, matchmissing=:equal, on = intersect(names(df),  names(df_new)))
             t_end = last(df.TIME)
-            println("==> ",t_end)
         end
     end
     df = Impute.interp(df)
@@ -80,6 +80,7 @@ function read_log(logfiles)
     local_time = ZonedDateTime(utc_time, TimeZone("Europe/Amsterdam"); from_utc=true) 
     println("Duration:   ", seconds2human(data_length))
     println("Last entry: ", local_time, "\n")
+    T0 = first(df.TIME)
     return df
 end
 
@@ -287,6 +288,29 @@ function find_performance(view, tdb, time)
     return perf
 end
 
+function rating(df)
+    markets = names(df)[2:end]
+    interest_4d = Float64[]
+    deviance_4d = Float64[]
+    # create view on the last four days or less, if less than 4 days of data available
+    n = min(60*24*4, size(df)[1])
+    view = last(df, n)
+    delta_t = view.TIME[end]-view.TIME[1] # timespan in seconds
+    for market in markets
+        y = view[!, market] 
+        X = [ones(n) (view.TIME .- T0)]
+        beta = NaN
+        model = GLM.fit(LinearModel, X, y./y[1]*100.0, dropcollinear=true)
+        beta = GLM.coef(model)[2]
+        dev  = deviance(model)/n
+        # push!(interest_4d, beta * delta_t)
+        push!(interest_4d, monthly_interest(beta * delta_t, delta_t))
+        push!(deviance_4d, dev)
+    end
+    res = DataFrame(MARKET = markets, MONTHLY_INTEREST_4d = interest_4d, DEVIANCE = deviance_4d, RATING=interest_4d./max.(deviance_4d, 10.0))
+    return first(sort!(res, [:RATING], rev=true), 5)
+end
+
 function check(df, tdb, prn=true)
     global INDEX, MAX_TRADE, MIN_DROP, MIN_DROP_24
     # create view to db with the first INDEX rows
@@ -310,6 +334,7 @@ function check(df, tdb, prn=true)
     if mod(INDEX, 60*12) == 0 # every 12h
         time = df.TIME[INDEX]
         perf = find_performance(view, tdb, time)
+        
         if ! isnothing(perf)
             sort!(perf, [:PERF], rev=true)
             if prn println(perf) end
@@ -317,8 +342,9 @@ function check(df, tdb, prn=true)
             if ( !(market in PREFER) && last(perf.PERF) < 1.0) || ((market in PREFER) && last(perf.PERF) < 0.95)
                 if prn println("Selling: ", market) end
                 sell(view, tdb, time, market)
-                market = first(perf.MARKET)
-                if first(perf.PERF) > 1.0
+                rating_ = rating(df)
+                market = first(rating_.MARKET)
+                # if first(perf.PERF) > 1.0
                     cash = calc_cash(view, tdb)
                     amount_to_use = cash
                     if cash >= MAX_TRADE
@@ -329,7 +355,7 @@ function check(df, tdb, prn=true)
                     else
                         if prn println("NOT buying: ", market, " time: ", time) end
                     end
-                end
+                # end
             end
         end
     end
@@ -362,10 +388,17 @@ end
 
 # interest in percent, duration in seconds
 function monthly_interest(interest, duration)
+    if interest < -100.0
+        interest = -100.0
+    end
     days=duration/(24*3600)
-    months=days/30.416666666666668
+    months=days/30.416666666666668 
     intervalls_per_month = 1.0/months
-    return 100.0*((1 + interest/100.0)^intervalls_per_month - 1.0)
+    try
+        return 100.0*((1 + interest/100.0)^intervalls_per_month - 1.0)
+    catch e
+        println("Error in monthly_interest. interest: ", interest)
+    end
 end
 
 function test1(df)
