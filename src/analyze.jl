@@ -360,8 +360,14 @@ function check(df, tdb, prn=true)
             if ( !(market in PREFER) && last(perf.PERF) < 1.0) || ((market in PREFER) && last(perf.PERF) < 0.95)
                 if prn println("Selling: ", market) end
                 sell(view, tdb, time, market)
-                rating_ = rating_table(df)
-                market = first(rating_.MARKET)
+                rating_ = rating_table(view)
+                
+                if INDEX < 4*24*60 # rating calculation is only reliable after 4 days
+                    market = first(perf.MARKET)
+                else
+                    market = first(rating_.MARKET)
+                    println(rating_)
+                end
                 # if first(perf.PERF) > 1.0
                     cash = calc_cash(view, tdb)
                     amount_to_use = cash
