@@ -20,12 +20,10 @@ https://sdobber.github.io/FA_LSTNet/
     Conda.pip("install", "python-bitvavo-api")
 
 ### TODO
-1. plot portefeuille 
+1. plot portefeuille !!!
 2. improve simulated auto-trading
-   - combine RISE_1h and RATING in one table; trigger only if RISE_1h > 4.2 
-     AND RATING > 10.0
+   - combine RISE_1h and RATING in one table; trigger only if RISE_1h > 4.2 AND RATING > 10.0
    - update RATING only once per hour
-   - add field DELTA, (current_course - predicted_course)/predicted_course*100.0
      buy only if DELTA > 0.0
 
 ### DONE
