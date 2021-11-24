@@ -2,8 +2,8 @@ using CSV, DataFrames, PyPlot, Dates, TimeZones, Impute, Statistics, GLM
 
 LOGFILES = ["log_1637352719.csv","log_1637489560.csv","log_1637573477.csv","log_1637607862.csv",
 "log_1637620607.csv", "log_1637620718.csv","log_1637620921.csv","log_1637621174.csv","log_1637661401.csv"]
-PREFER   = ["AVAX_EUR", "SAND_EUR","VGX_EUR"]
-# PREFER=[]
+# PREFER   = ["AVAX_EUR", "SAND_EUR","VGX_EUR"]
+PREFER=[]
 INDEX = 1
 TDB   = nothing
 START_KAPITAL = 1000.0           # in EUR
@@ -288,26 +288,34 @@ function find_performance(view, tdb, time)
     return perf
 end
 
-function rating(df)
+function subrating(df, n, interest_function)
     markets = names(df)[2:end]
-    interest_4d = Float64[]
-    deviance_4d = Float64[]
-    # create view on the last four days or less, if less than 4 days of data available
-    n = min(60*24*4, size(df)[1])
+    interest = Float64[]
+    deviance1 = Float64[]
     view = last(df, n)
     delta_t = view.TIME[end]-view.TIME[1] # timespan in seconds
     for market in markets
         y = view[!, market] 
         X = [ones(n) (view.TIME .- T0)]
-        beta = NaN
         model = GLM.fit(LinearModel, X, y./y[1]*100.0, dropcollinear=true)
         beta = GLM.coef(model)[2]
         dev  = deviance(model)/n
-        # push!(interest_4d, beta * delta_t)
-        push!(interest_4d, monthly_interest(beta * delta_t, delta_t))
-        push!(deviance_4d, dev)
+        push!(interest, interest_function(beta * delta_t, delta_t))
+        push!(deviance1, dev)
     end
-    res = DataFrame(MARKET = markets, MONTHLY_INTEREST_4d = interest_4d, DEVIANCE = deviance_4d, RATING=interest_4d./max.(deviance_4d, 10.0))
+    return interest, deviance1
+end
+
+function rating(df)
+    n = min(60*24*4, size(df)[1])
+    # create view on the last four days or less, if less than 4 days of data available
+    interest_4d, deviance_4d = subrating(df, n, monthly_interest)
+    # create view on the last day or less, if less than 1 day of data available
+    n = min(60*24, size(df)[1])
+    interest_1d, deviance_1d = subrating(df, n, weekly_interest)
+    interest_1d = min.(100000.0, interest_1d)
+    markets = names(df)[2:end]
+    res = DataFrame(MARKET = markets, MONTHLY_INTEREST_4d = interest_4d, DEVIANCE_4d = deviance_4d, WEEKLY_INTEREST_1d = interest_1d, DEVIANCE_1d = deviance_1d, RATING=(interest_4d./max.(deviance_4d, 10.0) .+ 0.00.*interest_1d./max.(deviance_1d, 10.0)))
     return first(sort!(res, [:RATING], rev=true), 5)
 end
 
@@ -399,6 +407,16 @@ function monthly_interest(interest, duration)
     catch e
         println("Error in monthly_interest. interest: ", interest)
     end
+end
+
+function weekly_interest(interest, duration)
+    if interest < -100.0
+        interest = -100.0
+    end
+    days=duration/(24*3600)
+    weeks=days/7.0
+    intervalls_per_week = 1.0/weeks
+    return 100.0*((1 + interest/100.0)^intervalls_per_week - 1.0)
 end
 
 function test1(df)
