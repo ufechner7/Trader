@@ -306,7 +306,7 @@ function subrating(df, n, interest_function)
     return interest, deviance1
 end
 
-function rating(df)
+function rating_table(df, m=8)
     n = min(60*24*4, size(df)[1])
     # create view on the last four days or less, if less than 4 days of data available
     interest_4d, deviance_4d = subrating(df, n, monthly_interest)
@@ -316,7 +316,15 @@ function rating(df)
     interest_1d = min.(100000.0, interest_1d)
     markets = names(df)[2:end]
     res = DataFrame(MARKET = markets, MONTHLY_INTEREST_4d = interest_4d, DEVIANCE_4d = deviance_4d, WEEKLY_INTEREST_1d = interest_1d, DEVIANCE_1d = deviance_1d, RATING=(interest_4d./max.(deviance_4d, 10.0) .+ 0.00.*interest_1d./max.(deviance_1d, 10.0)))
-    return first(sort!(res, [:RATING], rev=true), 5)
+    return first(sort!(res, [:RATING], rev=true), m)
+end
+
+function rating(rating_table, market)
+    for row in eachrow(rating_table)
+        if row.MARKET == market
+            return row.RATING
+        end
+    end
 end
 
 function check(df, tdb, prn=true)
@@ -324,10 +332,12 @@ function check(df, tdb, prn=true)
     # create view to db with the first INDEX rows
     view = df[1:INDEX, :]
     by_hour, by_day = overview(view)
+    # rating_tab=rating_table(df, 10000)
     for row in eachrow(by_hour)
         market = row.MARKET
+        # r=rating(rating_tab, market)
         time = df.TIME[INDEX] + 10 
-        if row.RISE_1h >= MAX_RISE && row.DROP_1h == 0.0 && row.RISE_1h < MAX_RISE + 3.0
+        if row.RISE_1h >= MAX_RISE && row.DROP_1h == 0.0 && row.RISE_1h < MAX_RISE + 3.0 #&& r > 10.0
             buy(view, tdb, time, market, MAX_TRADE)
         end
         if row.DROP_1h < MIN_DROP || row.DROP_24h < MIN_DROP_24
@@ -350,7 +360,7 @@ function check(df, tdb, prn=true)
             if ( !(market in PREFER) && last(perf.PERF) < 1.0) || ((market in PREFER) && last(perf.PERF) < 0.95)
                 if prn println("Selling: ", market) end
                 sell(view, tdb, time, market)
-                rating_ = rating(df)
+                rating_ = rating_table(df)
                 market = first(rating_.MARKET)
                 # if first(perf.PERF) > 1.0
                     cash = calc_cash(view, tdb)
