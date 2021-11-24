@@ -22,7 +22,8 @@ https://sdobber.github.io/FA_LSTNet/
 ### TODO
 1. plot portefeuille 
 2. improve simulated auto-trading
-   - calculate two different averages per coin
+   - combine RISE_1h and RATING in one table; trigger only if RISE_1h > 4.2 
+     AND RATING > 10.0
 
 ### DONE
 1. write a script that monitors the price of n coins once per 5s
