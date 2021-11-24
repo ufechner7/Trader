@@ -2,7 +2,7 @@
  
 source ./init.sh
 if test -f "MakieSysDev.so"; then
-    julia -t auto -J MakieSysDev.so --project 
+    julia -t auto -J MakieSysdev.so --project 
 else
     julia -t auto --optimize=1 --project
 fi
