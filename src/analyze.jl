@@ -381,34 +381,24 @@ function check(df, tdb, prn=true)
         market = row.MARKET
         time = df.TIME[INDEX] + 10 
         if row.RISE_1h >= MAX_RISE 
-            # && row.DROP_1h == 0.0 && row.RISE_1h < MAX_RISE + 3.0 #&& r > 10.0
-            # cash=calc_cash(view,tdb)
-            # if cash >= 0.5*MAX_TRADE && cash < MAX_TRADE
-            #     buy(view, tdb, time, market, cash)
-            # else
-            #     buy(view, tdb, time, market, MAX_TRADE)
-            # end
             if INDEX < DAYS*24*60 || isnothing(rating_tab) # rating calculation is only reliable after 4 days
-                if isnothing(rating_tab)
-                    rating_ = 1.0
-                else
-                    rating_ = rating(rating_tab, market)
-                end
-                if rating_ > -100.0
-                    buy(view, tdb, time, market, MAX_TRADE)
-                end
+                buy(view, tdb, time, market, MAX_TRADE)
             else
                 rating_ = rating(rating_tab, market)
                 if rating_ > MIN_RATING
                     buy(view, tdb, time, market, MAX_TRADE)
+                    cash=calc_cash(view,tdb)
+                    if cash >= 0.5*MAX_TRADE && cash < MAX_TRADE
+                        buy(view, tdb, time, market, cash)
+                    else
+                        buy(view, tdb, time, market, MAX_TRADE)
+                    end
                 end
-            end
-            
+            end            
         end
         if row.DROP_1h < MIN_DROP || row.DROP_24h < MIN_DROP_24
             sell(df, tdb, time, market)
         end
-
     end
 
     if mod(INDEX, 60*12) == 0 # every 18h
