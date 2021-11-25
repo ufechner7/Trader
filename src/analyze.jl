@@ -303,25 +303,36 @@ end
 # return a table of all markets and their performance
 # fields: MARKET, COURSE, REF_COURSE, REF_TIME, REL_PRIZE
 # ref_market should be passed only when buying a coin the first time
-function performance_table(df, ref_time, perf_table = nothing; ref_market=nothing)
+function rel_prize_table(df, ref_time, rel_prize_table = nothing; ref_market=nothing)
     markets = names(df)[2:end]
-    if isnothing(perf_table)
-       init = true
+    if isnothing(rel_prize_table)
+        init = true
+    else
+        init = false
     end
     if init
         for market in markets
             ref_course = first(df[!, market])
-            if isnothing(perf_table)
-                perf_table = DataFrame(MARKET = market, REF_COURSE=ref_course, REF_TIME=ref_time, REL_PRIZE=1.0)
+            if isnothing(rel_prize_table)
+                rel_prize_table = DataFrame(MARKET = market, REF_COURSE=ref_course, REF_TIME=ref_time, REL_PRIZE=1.0)
             else
                 rel_prize = 1.0
                 v = [market, ref_course, ref_time, rel_prize]
-                push!(perf_table, v)
+                push!(rel_prize_table, v)
             end
         end
     else
+        for row in eachrow(rel_prize_table)
+            market=row.MARKET
+            course = last(df[!, market])
+            row.REL_PRIZE = course/row.REF_COURSE
+        end
     end
-    perf_table
+    rel_prize_table
+end
+
+function rel_prize(rel_prize_table, market)
+    rel_prize_table[(rel_prize_table.MARKET .== market), :REL_PRIZE][1]
 end
 
 function subrating(df, n, interest_function)
@@ -378,12 +389,17 @@ function rating(rating_table, market)
     end
 end
 
-function check(df, tdb, prn=true)
+function check(df, tdb, rp_table; prn=true)
     global INDEX, MAX_TRADE, MIN_DROP, MIN_DROP_24
     global rating_tab
     # create view to db with the first INDEX rows
     view = df[1:INDEX, :]
     by_hour, by_day = overview(view)
+
+    # update rp_table
+    time = df.TIME[INDEX]
+    rel_prize_table(df, time, rp_table)
+
 
     if mod(INDEX, 60) == 0 # every hour
         # println("==> hour")
@@ -396,7 +412,7 @@ function check(df, tdb, prn=true)
                 market = row.MARKET
                 time = df.TIME[INDEX] + 10 
                 if row.RATING < 0.75*MIN_RATING 
-                   println("==> Sell: ", market)
+                   if prn println("==> Sell: ", market) end
                    sell(view, tdb, time, market)
                 end
             end
@@ -441,7 +457,8 @@ function check(df, tdb, prn=true)
                 rating_ = rating_table(view, 8, false)
                 
                 if INDEX < DAYS*24*60 # rating calculation is only reliable after DAYS days
-                    markets = (perf.MARKET)
+                    # markets = (perf.MARKET)
+                    markets = (first(sort(rp_table, [:REL_PRIZE], rev=true),12)).MARKET
                 else
                     markets = (rating_.MARKET)
                     if prn println(rating_) end
@@ -459,16 +476,11 @@ function check(df, tdb, prn=true)
                         rating_ = rating(rating_tab, market)
                         flag = rating_ > MIN_RATING 
                     else 
-                        performance = perf.PERF[i]
-                        rise1h = change_1h(view, market)
-                        if performance > 1.0 # && rise1h > 0.0
-                            println("==========> perf, rise1h: ", performance, ", ", rise1h)
-                            flag = true
-                        end   
-                        # flag = true            
+                        performance = rel_prize(rp_table, market)
+                        flag = true          
                     end
                     if flag && buy(view, tdb, time, market, amount_to_use; force=true, reason="every 12h: time < 4d or rating_ >= rating(rating_tab, market)")
-                       println("Buying: ", market, " time: ", (time-T0)/3600, " perf: ", performance)
+                       if prn println("Buying: ", market, " time: ", (time-T0)/3600) end
                        cash = calc_cash(view, tdb)
                        if cash < 0.5 * MAX_TRADE break end
                         amount_to_use = cash
@@ -492,13 +504,15 @@ function trade(df, n=0, prn=true)
         n = size(df)[1]
     end
     tdb = trade_db(df, START_KAPITAL)
+
     time = df.TIME[INDEX] + 10 
+    rp_table = rel_prize_table(df, time)
     view = df[1:INDEX, :]
     for market in PREFER
         buy(view, tdb, time, market, MAX_TRADE; reason="market in PREFER")
     end
     for i in WAIT:n
-        check(df, tdb, prn)
+        check(df, tdb, rp_table; prn=prn)
     end
     tdb
 end
@@ -671,7 +685,7 @@ function plot_interest(df)
     duration = (tdb.TIME) .- first(tdb.TIME)
     monthly = monthly_interest.(interest, duration)
     ax = plt.gca()
-    ax.set_ylim([0, 500])
+    ax.set_ylim([0, 600])
     ax.set_xlim([80, (last(tdb.TIME)-T0)/3600])
     xlabel("time [h]" * "               last_updated: " * last_updated(df))
     plot((tdb.TIME.-T0)./3600, monthly)
