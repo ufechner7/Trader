@@ -352,7 +352,8 @@ function check(df, tdb, prn=true)
         market = row.MARKET
         # r=rating(rating_tab, market)
         time = df.TIME[INDEX] + 10 
-        if row.RISE_1h >= MAX_RISE && row.DROP_1h == 0.0 && row.RISE_1h < MAX_RISE + 3.0 #&& r > 10.0
+        if row.RISE_1h >= MAX_RISE # && row.DROP_1h == 0.0 
+            # && row.RISE_1h < MAX_RISE + 3.0 #&& r > 10.0
             # cash=calc_cash(view,tdb)
             # if cash >= 0.5*MAX_TRADE && cash < MAX_TRADE
             #     buy(view, tdb, time, market, cash)
