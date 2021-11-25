@@ -157,7 +157,7 @@ function trade_db(df, save_eur::Float64)
     t0 = first(df.TIME)
     INDEX = WAIT
     T0 = t0
-    trade_db = DataFrame(TIME=t0, REL_TIME=0.0, MARKET = "DEPOSIT", SELL_EUR=0.0, BUY_EUR=0.0, SELL_COINS=0.0, BUY_COINS=0.0, SAVE_EUR=save_eur, WITHDRAW_EUR=0.0, CASH=save_eur, TOTAL=save_eur)
+    trade_db = DataFrame(TIME=t0, REL_TIME=0.0, MARKET = "DEPOSIT", SELL_EUR=0.0, BUY_EUR=0.0, SELL_COINS=0.0, BUY_COINS=0.0, SAVE_EUR=save_eur, WITHDRAW_EUR=0.0, CASH=save_eur, TOTAL=save_eur, REASON="save_eur")
 end
 
 function calc_cash(df, tdb)
@@ -186,7 +186,7 @@ function calc_total(df, tdb)
     return total
 end
 
-function buy(df, tdb, time, market, amount, force=false)
+function buy(df, tdb, time, market, amount; force=false, reason="")
     global FEE, T0
     subset = filter(row -> row.MARKET == market, tdb)
     old_amount = sum(subset.BUY_EUR) - sum(subset.SELL_EUR)
@@ -195,7 +195,7 @@ function buy(df, tdb, time, market, amount, force=false)
         rate = last(df[!, market])
         coins = amount / rate * FEE
         total = calc_total(df, tdb) + coins * rate - amount
-        v = [time, (time-T0)/3600, market, 0.0, amount, 0.0, coins, 0.0, 0.0, cash-amount, total]
+        v = [time, (time-T0)/3600, market, 0.0, amount, 0.0, coins, 0.0, 0.0, cash-amount, total, reason]
         push!(tdb, v)
         return true
     end
@@ -205,12 +205,12 @@ end
 function update_total(df, tdb, time)
     global T0
     total = calc_total(df, tdb)
-    v = [time, time-T0, "", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, calc_cash(df, tdb), total]
+    v = [time, time-T0, "", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, calc_cash(df, tdb), total, "update_total"]
     push!(tdb, v)    
 end
 
 # sell all coins of a given market
-function sell(df, tdb, time, market)
+function sell(df, tdb, time, market; reason="")
     global T0
     subset = filter(row -> row.MARKET == market, tdb)
     old_amount = sum(subset.BUY_COINS) - sum(subset.SELL_COINS)
@@ -220,7 +220,7 @@ function sell(df, tdb, time, market)
         # println("Sell: ", market, " rate: ", rate)
         sell_eur = old_amount * rate
         total = calc_total(df, tdb)
-        v = [time, (time-T0)/3600, market, sell_eur, 0.0, old_amount, 0.0, 0.0, 0.0, cash+sell_eur, total]
+        v = [time, (time-T0)/3600, market, sell_eur, 0.0, old_amount, 0.0, 0.0, 0.0, cash+sell_eur, total, reason]
         push!(tdb, v)
     end
 end
@@ -377,21 +377,22 @@ function check(df, tdb, prn=true)
             end
         end
     end
+    # buy and sell if required
     for row in eachrow(by_hour)
         market = row.MARKET
         time = df.TIME[INDEX] + 10 
         if row.RISE_1h >= MAX_RISE 
             if INDEX < DAYS*24*60 || isnothing(rating_tab) # rating calculation is only reliable after 4 days
-                buy(view, tdb, time, market, MAX_TRADE)
+                buy(view, tdb, time, market, MAX_TRADE; reason="RISE_1h >= MAX_RISE")
             else
                 rating_ = rating(rating_tab, market)
                 if rating_ > MIN_RATING
-                    buy(view, tdb, time, market, MAX_TRADE)
+                    buy(view, tdb, time, market, MAX_TRADE; reason="rating_ > MIN_RATING")
                     cash=calc_cash(view,tdb)
                     if cash >= 0.5*MAX_TRADE && cash < MAX_TRADE
-                        buy(view, tdb, time, market, cash)
+                        buy(view, tdb, time, market, cash; reason="rating_ > MIN_RATING")
                     else
-                        buy(view, tdb, time, market, MAX_TRADE)
+                        buy(view, tdb, time, market, MAX_TRADE; reason="rating_ > MIN_RATING")
                     end
                 end
             end            
@@ -401,7 +402,7 @@ function check(df, tdb, prn=true)
         end
     end
 
-    if mod(INDEX, 60*12) == 0 # every 18h
+    if mod(INDEX, 60*12) == 0 # every 12h
         time = df.TIME[INDEX]
         perf = find_performance(view, tdb, time, rating_tab)
         
@@ -427,7 +428,7 @@ function check(df, tdb, prn=true)
                 end
                 println("==> ", markets)
                 for market in markets                   
-                    if buy(view, tdb, time, market, amount_to_use, true)
+                    if buy(view, tdb, time, market, amount_to_use; force=true, reason="every 12h top 8 rating or top performance")
                        if prn println("Buying: ", market, " time: ", time) end
                        cash = calc_cash(view, tdb)
                        if cash < 0.5 * MAX_TRADE break end
@@ -454,7 +455,7 @@ function trade(df, n=0, prn=true)
     time = df.TIME[INDEX] + 10 
     view = df[1:INDEX, :]
     for market in PREFER
-        buy(view, tdb, time, market, MAX_TRADE)
+        buy(view, tdb, time, market, MAX_TRADE; reason="market in PREFER")
     end
     for i in WAIT:n
         check(df, tdb, prn)
