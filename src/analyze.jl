@@ -328,9 +328,16 @@ function rel_prize_table(df, ref_time, rel_prize_table = nothing; ref_market=not
                 market=row.MARKET
                 if market==ref_market
                     course = last(df[!, market])
+                    row.REF_COURSE = course
                     println("old REL_PRIZE: ", row.REL_PRIZE, ", new REL_PRIZE: ", course/row.REF_COURSE)
                     row.REL_PRIZE = course/row.REF_COURSE
                 end
+            end
+        else
+            for row in eachrow(rel_prize_table)
+                market=row.MARKET
+                course = last(df[!, market])
+                row.REL_PRIZE = course/row.REF_COURSE
             end
         end
     end
@@ -445,7 +452,7 @@ function check(df, tdb, rp_table; prn=true)
             end            
         end
         if row.DROP_1h < MIN_DROP || row.DROP_24h < MIN_DROP_24
-            sell(df, tdb, time, market)
+            sell(df, tdb, time, market; reason="row.DROP_1h < MIN_DROP || row.DROP_24h < MIN_DROP_24")
         end
     end
 
@@ -457,9 +464,9 @@ function check(df, tdb, rp_table; prn=true)
             sort!(perf, [:PERF], rev=true)
             if prn println(perf) end
             market = last(perf.MARKET)
-            if ( !(market in PREFER) && last(perf.PERF) < 1.0) || ((market in PREFER) && last(perf.PERF) < 0.95)
+            if last(perf.PERF) < 1.0 
                 if prn println("Selling: ", market) end
-                sell(view, tdb, time, market)
+                sell(view, tdb, time, market; reason="last(perf.PERF) < 1.0 "*string(round(last(perf.PERF),digits=3)))
                 rating_ = rating_table(view, 8, false)
                 
                 if INDEX < DAYS*24*60 # rating calculation is only reliable after DAYS days
@@ -483,7 +490,7 @@ function check(df, tdb, rp_table; prn=true)
                         flag = rating_ > MIN_RATING 
                     else 
                         performance = rel_prize(rp_table, market)
-                        if performance > 1.0
+                        if performance > 1.01
                             flag = true
                         end          
                     end
