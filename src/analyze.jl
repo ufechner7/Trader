@@ -299,6 +299,31 @@ function find_performance(view, tdb, time, rating_table=nothing)
     return perf
 end
 
+
+# return a table of all markets and their performance
+# fields: MARKET, COURSE, REF_COURSE, REF_TIME, REL_PRIZE
+# ref_market should be passed only when buying a coin the first time
+function performance_table(df, ref_time, perf_table = nothing; ref_market=nothing)
+    markets = names(df)[2:end]
+    if isnothing(perf_table)
+       init = true
+    end
+    if init
+        for market in markets
+            ref_course = first(df[!, market])
+            if isnothing(perf_table)
+                perf_table = DataFrame(MARKET = market, REF_COURSE=ref_course, REF_TIME=ref_time, REL_PRIZE=1.0)
+            else
+                rel_prize = 1.0
+                v = [market, ref_course, ref_time, rel_prize]
+                push!(perf_table, v)
+            end
+        end
+    else
+    end
+    perf_table
+end
+
 function subrating(df, n, interest_function)
     markets = names(df)[2:end]
     interest = Float64[]
@@ -426,10 +451,24 @@ function check(df, tdb, prn=true)
                 if cash >= MAX_TRADE
                     amount_to_use = MAX_TRADE
                 end
-                println("==> ", markets)
-                for market in markets                   
-                    if buy(view, tdb, time, market, amount_to_use; force=true, reason="every 12h top 8 rating or top performance")
-                       if prn println("Buying: ", market, " time: ", time) end
+                # println("==> ", markets)
+                i = 1
+                for market in markets   
+                    flag = false
+                    if INDEX >= DAYS*24*60
+                        rating_ = rating(rating_tab, market)
+                        flag = rating_ > MIN_RATING 
+                    else 
+                        performance = perf.PERF[i]
+                        rise1h = change_1h(view, market)
+                        if performance > 1.0 # && rise1h > 0.0
+                            println("==========> perf, rise1h: ", performance, ", ", rise1h)
+                            flag = true
+                        end   
+                        # flag = true            
+                    end
+                    if flag && buy(view, tdb, time, market, amount_to_use; force=true, reason="every 12h: time < 4d or rating_ >= rating(rating_tab, market)")
+                       println("Buying: ", market, " time: ", (time-T0)/3600, " perf: ", performance)
                        cash = calc_cash(view, tdb)
                        if cash < 0.5 * MAX_TRADE break end
                         amount_to_use = cash
@@ -437,6 +476,7 @@ function check(df, tdb, prn=true)
                             amount_to_use = MAX_TRADE
                         end                       
                     end
+                    i += 1
                 end
             end
         end
