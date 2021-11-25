@@ -13,6 +13,8 @@ MAX_RISE      =  4.3             # buy  if RISE_1h goes above this value [%]
 MIN_DROP      = -25.0            # sell if DROP_1h goes below this value [%]
 MIN_DROP_24   = -35.0            # sell if DROP_24h goes below this value [%]
 WAIT          = 60               # number of minutes to wait before dealing
+DAYS          = 4                # number of days to wait for valid rating
+MIN_RATING    = 100               # minimal rating to buy a coin
 T0            = 0
 rating_tab    = nothing
 
@@ -363,23 +365,20 @@ function check(df, tdb, prn=true)
         time = df.TIME[INDEX]
         rating_tab=rating_table(view, 10000, false)
         update_total(view, tdb, time)
-        if INDEX > 4*24*60
+        if INDEX > DAYS*24*60
             perf = find_performance(view, tdb, time, rating_tab)
             for row in eachrow(perf)
                 market = row.MARKET
                 time = df.TIME[INDEX] + 10 
-                if row.RATING < 50.0
+                if row.RATING < MIN_RATING / 2.0
                    println("==> Sell: ", market)
                    sell(view, tdb, time, market)
                 end
-                # println("==>", market)
-                # println(perf) 
             end
         end
     end
     for row in eachrow(by_hour)
         market = row.MARKET
-        # r=rating(rating_tab, market)
         time = df.TIME[INDEX] + 10 
         if row.RISE_1h >= MAX_RISE 
             # && row.DROP_1h == 0.0 && row.RISE_1h < MAX_RISE + 3.0 #&& r > 10.0
@@ -389,7 +388,7 @@ function check(df, tdb, prn=true)
             # else
             #     buy(view, tdb, time, market, MAX_TRADE)
             # end
-            if INDEX < 2*24*60 || isnothing(rating_tab) # rating calculation is only reliable after 4 days
+            if INDEX < DAYS*24*60 || isnothing(rating_tab) # rating calculation is only reliable after 4 days
                 if isnothing(rating_tab)
                     rating_ = 1.0
                 else
@@ -400,7 +399,7 @@ function check(df, tdb, prn=true)
                 end
             else
                 rating_ = rating(rating_tab, market)
-                if rating_ > 100.0
+                if rating_ > MIN_RATING
                     buy(view, tdb, time, market, MAX_TRADE)
                 end
             end
@@ -425,7 +424,7 @@ function check(df, tdb, prn=true)
                 sell(view, tdb, time, market)
                 rating_ = rating_table(view)
                 
-                if INDEX < 4*24*60 # rating calculation is only reliable after 4 days
+                if INDEX < DAYS*24*60 # rating calculation is only reliable after DAYS days
                     market = first(perf.MARKET)
                 else
                     market = first(rating_.MARKET)
