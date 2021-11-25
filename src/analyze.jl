@@ -524,6 +524,34 @@ function test3(df, plot=false)
     end
 end
 
+function test3b(df, plot=false)
+    global WAIT, TDB
+    if isnothing(TDB)
+        tdb = trade(df, 0)
+        TDB=tdb
+    else
+        tdb=TDB
+    end
+    WAIT = 4*60
+    markets = list_markets(tdb)
+    sell_all(df, tdb, markets)
+
+    if plot
+        push!(markets, "BTC_EUR")
+        return plot_markets(df, tdb, markets)
+    else
+        tdb2 = filter(row -> row.MARKET != "", tdb)
+        interest = (last(tdb.TOTAL)/first(tdb.TOTAL)-1.0)*100.0
+        duration = last(df.TIME) - first(df.TIME)
+        yearly = yearly_interest(interest, duration)
+        monthly = monthly_interest(interest, duration)
+        # println("The interest rate per year is:  ", round(yearly), " %")
+        println("The interest rate per month is: ", round(monthly), " %")
+        return tdb2
+    end
+    WAIT=60
+end
+
 function test4(df)
     tdb=trade(df)
     markets = list_markets(tdb)
@@ -587,7 +615,8 @@ function plot_interest(df)
     duration = (tdb.TIME) .- first(tdb.TIME)
     monthly = monthly_interest.(interest, duration)
     ax = plt.gca()
-    ax.set_ylim([-50, 400])
+    ax.set_ylim([0, 500])
+    ax.set_xlim([80, (last(tdb.TIME)-T0)/3600])
     xlabel("time [h]" * "               last_updated: " * last_updated(df))
     plot((tdb.TIME.-T0)./3600, monthly)
     title("Monthly interest [%]\n")
