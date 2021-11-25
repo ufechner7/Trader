@@ -19,8 +19,29 @@ https://sdobber.github.io/FA_LSTNet/
     Conda.pip_interop(true)
     Conda.pip("install", "python-bitvavo-api")
 
+            if list 
+            println("==>2")
+            new_list = list_markets(tdb)
+            println(new_list)
+            if new_list != old_list
+                # println(last(view.TIME), " ", T0)
+                # break
+                time   = last(view.TIME) - T0
+                time_h = time/3600.0
+                println(round(time_h, digits=2)," ", new_list)
+                old_list = new_list
+            end
+        
+
 ### TODO
 1. plot portefeuille !!!
+2. implement function analyze_portefeuille()
+   - create a table that lists all our coins and their performance
+   - create an optimal portefeuille
+   - compare them
+   - make suggestions what to sell and what to buy now
+   - make suggestions what to sell and what to buy later
+
 2. improve simulated auto-trading
    - combine RISE_1h and RATING in one table; trigger only if RISE_1h > 4.2 AND RATING > 10.0
    - update RATING only once per hour
