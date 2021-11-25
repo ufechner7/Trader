@@ -363,6 +363,19 @@ function check(df, tdb, prn=true)
         time = df.TIME[INDEX]
         rating_tab=rating_table(view, 10000, false)
         update_total(view, tdb, time)
+        if INDEX > 4*24*60
+            perf = find_performance(view, tdb, time, rating_tab)
+            for row in eachrow(perf)
+                market = row.MARKET
+                time = df.TIME[INDEX] + 10 
+                if row.RATING < 50.0
+                   println("==> Sell: ", market)
+                   sell(view, tdb, time, market)
+                end
+                # println("==>", market)
+                # println(perf) 
+            end
+        end
     end
     for row in eachrow(by_hour)
         market = row.MARKET
@@ -432,6 +445,7 @@ function check(df, tdb, prn=true)
                 # end
             end
         end
+
     end
     INDEX+=1
 end
