@@ -186,7 +186,7 @@ function calc_total(df, tdb)
     return total
 end
 
-function buy(df, tdb, time, market, amount; force=false, reason="")
+function buy(df, tdb, rp_table, time, market, amount; force=false, reason="")
     global FEE, T0
     subset = filter(row -> row.MARKET == market, tdb)
     old_amount = sum(subset.BUY_EUR) - sum(subset.SELL_EUR)
@@ -196,6 +196,7 @@ function buy(df, tdb, time, market, amount; force=false, reason="")
         coins = amount / rate * FEE
         total = calc_total(df, tdb) + coins * rate - amount
         v = [time, (time-T0)/3600, market, 0.0, amount, 0.0, coins, 0.0, 0.0, cash-amount, total, reason]
+        rel_prize_table(df, time, rp_table; ref_market=market)
         push!(tdb, v)
         return true
     end
@@ -322,10 +323,15 @@ function rel_prize_table(df, ref_time, rel_prize_table = nothing; ref_market=not
             end
         end
     else
-        for row in eachrow(rel_prize_table)
-            market=row.MARKET
-            course = last(df[!, market])
-            row.REL_PRIZE = course/row.REF_COURSE
+        if ! isnothing(ref_market)
+            for row in eachrow(rel_prize_table)
+                market=row.MARKET
+                if market==ref_market
+                    course = last(df[!, market])
+                    println("old REL_PRIZE: ", row.REL_PRIZE, ", new REL_PRIZE: ", course/row.REF_COURSE)
+                    row.REL_PRIZE = course/row.REF_COURSE
+                end
+            end
         end
     end
     rel_prize_table
@@ -424,16 +430,16 @@ function check(df, tdb, rp_table; prn=true)
         time = df.TIME[INDEX] + 10 
         if row.RISE_1h >= MAX_RISE 
             if INDEX < DAYS*24*60 || isnothing(rating_tab) # rating calculation is only reliable after 4 days
-                buy(view, tdb, time, market, MAX_TRADE; reason="RISE_1h >= MAX_RISE")
+                buy(view, tdb, rp_table, time, market, MAX_TRADE; reason="RISE_1h >= MAX_RISE")
             else
                 rating_ = rating(rating_tab, market)
                 if rating_ > MIN_RATING
-                    buy(view, tdb, time, market, MAX_TRADE; reason="rating_ > MIN_RATING")
+                    buy(view, tdb, rp_table, time, market, MAX_TRADE; reason="rating_ > MIN_RATING")
                     cash=calc_cash(view,tdb)
                     if cash >= 0.5*MAX_TRADE && cash < MAX_TRADE
-                        buy(view, tdb, time, market, cash; reason="rating_ > MIN_RATING")
+                        buy(view, tdb, rp_table, time, market, cash; reason="rating_ > MIN_RATING")
                     else
-                        buy(view, tdb, time, market, MAX_TRADE; reason="rating_ > MIN_RATING")
+                        buy(view, tdb, rp_table, time, market, MAX_TRADE; reason="rating_ > MIN_RATING")
                     end
                 end
             end            
@@ -477,9 +483,11 @@ function check(df, tdb, rp_table; prn=true)
                         flag = rating_ > MIN_RATING 
                     else 
                         performance = rel_prize(rp_table, market)
-                        flag = true          
+                        if performance > 1.0
+                            flag = true
+                        end          
                     end
-                    if flag && buy(view, tdb, time, market, amount_to_use; force=true, reason="every 12h: time < 4d or rating_ >= rating(rating_tab, market)")
+                    if flag && buy(view, tdb, rp_table, time, market, amount_to_use; force=true, reason="every 12h: time < 4d or rating_ >= rating(rating_tab, market)")
                        if prn println("Buying: ", market, " time: ", (time-T0)/3600) end
                        cash = calc_cash(view, tdb)
                        if cash < 0.5 * MAX_TRADE break end
@@ -509,7 +517,7 @@ function trade(df, n=0, prn=true)
     rp_table = rel_prize_table(df, time)
     view = df[1:INDEX, :]
     for market in PREFER
-        buy(view, tdb, time, market, MAX_TRADE; reason="market in PREFER")
+        buy(view, tdb, rp_table, time, market, MAX_TRADE; reason="market in PREFER")
     end
     for i in WAIT:n
         check(df, tdb, rp_table; prn=prn)
