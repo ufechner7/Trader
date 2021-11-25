@@ -440,6 +440,8 @@ function check(df, tdb, prn=true)
 end
 
 function trade(df, n=0, prn=true)
+    global rating
+    rating_tab    = nothing
     if n == 0
         n = size(df)[1]
     end
@@ -532,13 +534,13 @@ end
 
 function test3b(df, plot=false)
     global WAIT, TDB
+    WAIT = 4*60
     if isnothing(TDB)
         tdb = trade(df, 0)
         TDB=tdb
     else
         tdb=TDB
     end
-    WAIT = 4*60
     markets = list_markets(tdb)
     sell_all(df, tdb, markets)
 
