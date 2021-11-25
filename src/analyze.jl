@@ -14,7 +14,7 @@ MIN_DROP      = -25.0            # sell if DROP_1h goes below this value [%]
 MIN_DROP_24   = -35.0            # sell if DROP_24h goes below this value [%]
 WAIT          = 60               # number of minutes to wait before dealing
 DAYS          = 4                # number of days to wait for valid rating
-MIN_RATING    = 75              # minimal rating to buy a coin
+MIN_RATING    = 70              # minimal rating to buy a coin
 T0            = 0
 rating_tab    = nothing
 
@@ -413,7 +413,7 @@ function check(df, tdb, rp_table; prn=true)
                 time = df.TIME[INDEX] + 10 
                 if row.RATING < 0.75*MIN_RATING 
                    if prn println("==> Sell: ", market) end
-                   sell(view, tdb, time, market)
+                   sell(view, tdb, time, market; reason="row.RATING < 0.75*MIN_RATING")
                 end
             end
         end
