@@ -292,30 +292,45 @@ function subrating(df, n, interest_function)
     markets = names(df)[2:end]
     interest = Float64[]
     deviance1 = Float64[]
+    delta = Float64[]
     view = last(df, n)
     delta_t = view.TIME[end]-view.TIME[1] # timespan in seconds
     for market in markets
         y = view[!, market] 
-        X = [ones(n) (view.TIME .- T0)]
-        model = GLM.fit(LinearModel, X, y./y[1]*100.0, dropcollinear=true)
+        x = view.TIME .- T0
+        X = [ones(n) x]
+        y_rel = y./y[1]*100.0
+        x = X[:,2]
+        model = GLM.fit(LinearModel, X, y_rel, dropcollinear=true)
+        b = GLM.coef(model)[1]
         beta = GLM.coef(model)[2]
         dev  = deviance(model)/n
+        current_course = df[!, market]
+        # plot(X[:,2], y_rel)
+        # plot(X[:,2], predict(model))
+        # (current_course - predicted_course)/predicted_course*100.0
+        delta_y = y_rel[end] - (b + (beta * x[end])) 
         push!(interest, interest_function(beta * delta_t, delta_t))
         push!(deviance1, dev)
+        push!(delta, delta_y)
     end
-    return interest, deviance1
+    return interest, deviance1, delta
 end
 
-function rating_table(df, m=8)
+function rating_table(df, m=8, filter=true)
     n = min(60*24*4, size(df)[1])
     # create view on the last four days or less, if less than 4 days of data available
-    interest_4d, deviance_4d = subrating(df, n, monthly_interest)
+    interest_4d, deviance_4d, delta_4d = subrating(df, n, monthly_interest)
     # create view on the last day or less, if less than 1 day of data available
     n = min(60*24, size(df)[1])
-    interest_1d, deviance_1d = subrating(df, n, weekly_interest)
+    interest_1d, deviance_1d, delta_1d = subrating(df, n, weekly_interest)
     interest_1d = min.(100000.0, interest_1d)
     markets = names(df)[2:end]
-    res = DataFrame(MARKET = markets, MONTHLY_INTEREST_4d = interest_4d, DEVIANCE_4d = deviance_4d, WEEKLY_INTEREST_1d = interest_1d, DEVIANCE_1d = deviance_1d, RATING=(interest_4d./max.(deviance_4d, 10.0) .+ 0.00.*interest_1d./max.(deviance_1d, 10.0)))
+    final_rating = (interest_4d./(3.162.*sqrt.(max.(deviance_4d, 10.0)./10.0)) .+ 0.00.*interest_1d./max.(deviance_1d, 10.0))
+    res = DataFrame(MARKET = markets, MONTHLY_INTEREST_4d = interest_4d, DEVIANCE_4d = deviance_4d, DELTA_4d = delta_4d, WEEKLY_INTEREST_1d = interest_1d, DEVIANCE_1d = deviance_1d, DELTA_1d = delta_1d, RATING=final_rating)
+    if filter
+         filter!(row -> row.DELTA_4d > 0.0, res)
+    end
     return first(sort!(res, [:RATING], rev=true), m)
 end
 
@@ -355,7 +370,7 @@ function check(df, tdb, prn=true)
         time = df.TIME[INDEX]
         update_total(view, tdb, time)
     end
-    if mod(INDEX, 60*12) == 0 # every 12h
+    if mod(INDEX, 60*12) == 0 # every 18h
         time = df.TIME[INDEX]
         perf = find_performance(view, tdb, time)
         
@@ -366,8 +381,14 @@ function check(df, tdb, prn=true)
             if ( !(market in PREFER) && last(perf.PERF) < 1.0) || ((market in PREFER) && last(perf.PERF) < 0.95)
                 if prn println("Selling: ", market) end
                 sell(view, tdb, time, market)
-                rating_ = rating_table(df)
-                market = first(rating_.MARKET)
+                rating_ = rating_table(view)
+                
+                if INDEX < 4*24*60 # rating calculation is only reliable after 4 days
+                    market = first(perf.MARKET)
+                else
+                    market = first(rating_.MARKET)
+                    if prn println(rating_) end
+                end
                 # if first(perf.PERF) > 1.0
                     cash = calc_cash(view, tdb)
                     amount_to_use = cash
@@ -533,7 +554,8 @@ function plot_interest(df)
     interest = ((tdb.TOTAL)./first(tdb.TOTAL).-1.0).*100.0
     duration = (tdb.TIME) .- first(tdb.TIME)
     monthly = monthly_interest.(interest, duration)
-   
+    ax = plt.gca()
+    ax.set_ylim([-50, 400])
     xlabel("time [h]" * "               last_updated: " * last_updated(df))
     plot((tdb.TIME.-T0)./3600, monthly)
     title("Monthly interest [%]\n")
@@ -554,6 +576,7 @@ function plot_markets(df, tdb=nothing, markets=nothing)
     x=(df.TIME .- T0)./360
     xlabel("time [h]")
     ylabel("performance [%]")
+    # stackplot(x,y1, y2, y3, labels=['A','B','C'])
     for market in markets
         ref = first(df[!, market])
         y=((df[!, market]/ref).-1.0) .* 100.0
@@ -562,6 +585,20 @@ function plot_markets(df, tdb=nothing, markets=nothing)
     legend(loc="upper left")
     grid("on")
     nothing
+end
+
+function plot_stacked(df, tdb=nothing)
+    global T0, TDB
+    if isnothing(TDB)
+        tdb=trade(df)
+        TDB=tdb
+    else
+        tdb=TDB
+    end
+    if isnothing(markets)
+        markets = list_markets(tdb, true)
+    end
+    x=(df.TIME .- T0)./360
 end
 
 df = read_log(logfiles())
