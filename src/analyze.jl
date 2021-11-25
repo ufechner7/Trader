@@ -14,6 +14,7 @@ MIN_DROP      = -25.0            # sell if DROP_1h goes below this value [%]
 MIN_DROP_24   = -35.0            # sell if DROP_24h goes below this value [%]
 WAIT          = 60               # number of minutes to wait before dealing
 T0            = 0
+rating_tab    = nothing
 
 # fetch the latest log file from the server
 function fetch_log()
@@ -250,7 +251,7 @@ function sell_all(df, tdb, markets)
     end
 end
 
-function find_performance(view, tdb, time)
+function find_performance(view, tdb, time, rating_table=nothing)
     perf = nothing
     dict = nothing
     for row in eachrow(tdb)
@@ -275,12 +276,20 @@ function find_performance(view, tdb, time)
     end
     for market in collect(keys(dict))
         initial, total = dict[market]
+        rating_ = 0.0
         if initial > 0.001 && total > 0.001
             performance = total / initial
+            if ! isnothing(rating_table)
+                rating_ = rating(rating_table, market)
+                if isnothing(rating_)
+                    rating_=-1.0
+                end
+            end
+            rel_time=(time-T0)/3600.0
             if isnothing(perf)
-                perf = DataFrame(TIME=time, MARKET = market, PERF=performance)
+                perf = DataFrame(TIME=time, REL_TIME=rel_time, MARKET = market, PERF=performance, RATING=rating_)
             else
-                v = [time, market, performance]
+                v = [time, rel_time, market, performance, rating_]
                 push!(perf, v)
             end
         end
@@ -344,36 +353,55 @@ end
 
 function check(df, tdb, prn=true)
     global INDEX, MAX_TRADE, MIN_DROP, MIN_DROP_24
+    global rating_tab
     # create view to db with the first INDEX rows
     view = df[1:INDEX, :]
     by_hour, by_day = overview(view)
-    # rating_tab=rating_table(df, 10000)
+
+    if mod(INDEX, 60) == 0 # every hour
+        # println("==> hour")
+        time = df.TIME[INDEX]
+        rating_tab=rating_table(view, 10000, false)
+        update_total(view, tdb, time)
+    end
     for row in eachrow(by_hour)
         market = row.MARKET
         # r=rating(rating_tab, market)
         time = df.TIME[INDEX] + 10 
-        if row.RISE_1h >= MAX_RISE # && row.DROP_1h == 0.0 
-            # && row.RISE_1h < MAX_RISE + 3.0 #&& r > 10.0
+        if row.RISE_1h >= MAX_RISE 
+            # && row.DROP_1h == 0.0 && row.RISE_1h < MAX_RISE + 3.0 #&& r > 10.0
             # cash=calc_cash(view,tdb)
             # if cash >= 0.5*MAX_TRADE && cash < MAX_TRADE
             #     buy(view, tdb, time, market, cash)
             # else
             #     buy(view, tdb, time, market, MAX_TRADE)
             # end
-            buy(view, tdb, time, market, MAX_TRADE)
+            if INDEX < 2*24*60 || isnothing(rating_tab) # rating calculation is only reliable after 4 days
+                if isnothing(rating_tab)
+                    rating_ = 1.0
+                else
+                    rating_ = rating(rating_tab, market)
+                end
+                if rating_ > -100.0
+                    buy(view, tdb, time, market, MAX_TRADE)
+                end
+            else
+                rating_ = rating(rating_tab, market)
+                if rating_ > 100.0
+                    buy(view, tdb, time, market, MAX_TRADE)
+                end
+            end
+            
         end
         if row.DROP_1h < MIN_DROP || row.DROP_24h < MIN_DROP_24
             sell(df, tdb, time, market)
         end
 
     end
-    if mod(INDEX, 60) == 0 # every hour
-        time = df.TIME[INDEX]
-        update_total(view, tdb, time)
-    end
+
     if mod(INDEX, 60*12) == 0 # every 18h
         time = df.TIME[INDEX]
-        perf = find_performance(view, tdb, time)
+        perf = find_performance(view, tdb, time, rating_tab)
         
         if ! isnothing(perf)
             sort!(perf, [:PERF], rev=true)
