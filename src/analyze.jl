@@ -14,7 +14,7 @@ MIN_DROP      = -25.0            # sell if DROP_1h goes below this value [%]
 MIN_DROP_24   = -35.0            # sell if DROP_24h goes below this value [%]
 WAIT          = 60               # number of minutes to wait before dealing
 DAYS          = 4                # number of days to wait for valid rating
-MIN_RATING    = 125              # minimal rating to buy a coin
+MIN_RATING    = 100              # minimal rating to buy a coin
 T0            = 0
 rating_tab    = nothing
 
@@ -370,7 +370,7 @@ function check(df, tdb, prn=true)
             for row in eachrow(perf)
                 market = row.MARKET
                 time = df.TIME[INDEX] + 10 
-                if row.RATING < MIN_RATING / 2.0
+                if row.RATING < 0.75*MIN_RATING 
                    println("==> Sell: ", market)
                    sell(view, tdb, time, market)
                 end
@@ -412,26 +412,31 @@ function check(df, tdb, prn=true)
             if ( !(market in PREFER) && last(perf.PERF) < 1.0) || ((market in PREFER) && last(perf.PERF) < 0.95)
                 if prn println("Selling: ", market) end
                 sell(view, tdb, time, market)
-                rating_ = rating_table(view)
+                rating_ = rating_table(view, 8, false)
                 
                 if INDEX < DAYS*24*60 # rating calculation is only reliable after DAYS days
-                    market = first(perf.MARKET)
+                    markets = (perf.MARKET)
                 else
-                    market = first(rating_.MARKET)
+                    markets = (rating_.MARKET)
                     if prn println(rating_) end
                 end
-                # if first(perf.PERF) > 1.0
-                    cash = calc_cash(view, tdb)
-                    amount_to_use = cash
-                    if cash >= MAX_TRADE
-                        amount_to_use = MAX_TRADE
-                    end
+                cash = calc_cash(view, tdb)
+                amount_to_use = cash
+                if cash >= MAX_TRADE
+                    amount_to_use = MAX_TRADE
+                end
+                println("==> ", markets)
+                for market in markets                   
                     if buy(view, tdb, time, market, amount_to_use, true)
                        if prn println("Buying: ", market, " time: ", time) end
-                    else
-                        if prn println("NOT buying: ", market, " time: ", time) end
+                       cash = calc_cash(view, tdb)
+                       if cash < 0.5 * MAX_TRADE break end
+                        amount_to_use = cash
+                        if cash >= MAX_TRADE
+                            amount_to_use = MAX_TRADE
+                        end                       
                     end
-                # end
+                end
             end
         end
 
