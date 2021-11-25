@@ -157,7 +157,7 @@ function trade_db(df, save_eur::Float64)
     t0 = first(df.TIME)
     INDEX = WAIT
     T0 = t0
-    trade_db = DataFrame(TIME=t0, REL_TIME=0, MARKET = "DEPOSIT", SELL_EUR=0.0, BUY_EUR=0.0, SELL_COINS=0.0, BUY_COINS=0.0, SAVE_EUR=save_eur, WITHDRAW_EUR=0.0, CASH=save_eur, TOTAL=save_eur)
+    trade_db = DataFrame(TIME=t0, REL_TIME=0.0, MARKET = "DEPOSIT", SELL_EUR=0.0, BUY_EUR=0.0, SELL_COINS=0.0, BUY_COINS=0.0, SAVE_EUR=save_eur, WITHDRAW_EUR=0.0, CASH=save_eur, TOTAL=save_eur)
 end
 
 function calc_cash(df, tdb)
@@ -195,7 +195,7 @@ function buy(df, tdb, time, market, amount, force=false)
         rate = last(df[!, market])
         coins = amount / rate * FEE
         total = calc_total(df, tdb) + coins * rate - amount
-        v = [time, time-T0, market, 0.0, amount, 0.0, coins, 0.0, 0.0, cash-amount, total]
+        v = [time, (time-T0)/3600, market, 0.0, amount, 0.0, coins, 0.0, 0.0, cash-amount, total]
         push!(tdb, v)
         return true
     end
@@ -220,7 +220,7 @@ function sell(df, tdb, time, market)
         # println("Sell: ", market, " rate: ", rate)
         sell_eur = old_amount * rate
         total = calc_total(df, tdb)
-        v = [time, time-T0, market, sell_eur, 0.0, old_amount, 0.0, 0.0, 0.0, cash+sell_eur, total]
+        v = [time, (time-T0)/3600, market, sell_eur, 0.0, old_amount, 0.0, 0.0, 0.0, cash+sell_eur, total]
         push!(tdb, v)
     end
 end
@@ -596,9 +596,11 @@ function plot_total(df)
     end
     xlabel("time [h]" * "               last_updated: " * last_updated(df))
     ylabel("EUR")
-    plot((tdb.TIME.-T0)./3600, tdb.TOTAL)
+    plot((tdb.TIME.-T0)./3600, tdb.TOTAL, label="total")
+    plot((tdb.TIME.-T0)./3600, tdb.CASH, label="cash")
     title("Value of total assets")
     grid("on")
+    legend(loc="lower right")
     nothing
 end
 
