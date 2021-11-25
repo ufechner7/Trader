@@ -36,18 +36,14 @@ https://sdobber.github.io/FA_LSTNet/
 ### TODO
 1. add rel_price to the bookings table; relative to t=0 when buying first, relative to buying when selling, relative to selling when buying second 
    perhaps we should not buy when rel_price is smaller than -5% and only sell when rel_price is smaller than -5%
-1. plot portefeuille !!!
-2. implement function analyze_portefeuille()
+2. add NLOpt to optimizer parameters like min_rating
+2. plot portefeuille !!!
+3. implement function analyze_portefeuille()
    - create a table that lists all our coins and their performance
    - create an optimal portefeuille
    - compare them
    - make suggestions what to sell and what to buy now
    - make suggestions what to sell and what to buy later
-
-2. improve simulated auto-trading
-   - combine RISE_1h and RATING in one table; trigger only if RISE_1h > 4.2 AND RATING > 10.0
-   - update RATING only once per hour
-     buy only if DELTA > 0.0
 
 ### DONE
 1. write a script that monitors the price of n coins once per 5s
