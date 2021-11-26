@@ -43,6 +43,7 @@ function plot_24h(df, name)
 end
 
 function plot_total(df)
+    figure()
     tdb=get_tdb()
     xlabel("time [h]" * "               last_updated: " * last_updated(df))
     ylabel("EUR")
@@ -55,6 +56,7 @@ function plot_total(df)
 end
 
 function plot_interest(df)
+    figure()
     tdb = get_tdb()
     markets = list_markets(tdb)
     sell_all(df, tdb, markets)
@@ -68,6 +70,18 @@ function plot_interest(df)
     plot((tdb.TIME.-T0)./3600, monthly)
     title("Monthly interest [%]\n")
     grid("on")
+    nothing
+end
+
+function plot_rating(df)
+    figure()
+    tdb = get_tdb()
+    y = TDB[TDB.MARKET .== "", :MEAN_RATING]
+    x = TDB[TDB.MARKET .== "", :TIME]
+    plot((x[96:end].-T0)./3600, y[96:end])
+    title("Hourly mean performance of top markets")
+    grid("on")
+    nothing
 end
 
 function plot_markets(df, tdb=nothing, markets=nothing)

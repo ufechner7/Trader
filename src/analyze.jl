@@ -17,7 +17,7 @@ function buy(df, tdb, rp_table, time, market, amount; force=false, reason="")
         rate = last(df[!, market])
         coins = amount / rate * FEE
         total = calc_total(df, tdb) + coins * rate - amount
-        v = [time, (time-T0)/3600, market, 0.0, amount, 0.0, coins, 0.0, 0.0, cash-amount, total, reason]
+        v = [time, (time-T0)/3600, market, 0.0, amount, 0.0, coins, 0.0, 0.0, cash-amount, total, 0.0, reason]
         rel_price_table(df, time, rp_table; ref_market=market)
         push!(tdb, v)
         return true
@@ -36,7 +36,7 @@ function sell(df, tdb, time, market; reason="")
         # println("Sell: ", market, " rate: ", rate)
         sell_eur = old_amount * rate
         total = calc_total(df, tdb)
-        v = [time, (time-T0)/3600, market, sell_eur, 0.0, old_amount, 0.0, 0.0, 0.0, cash+sell_eur, total, reason]
+        v = [time, (time-T0)/3600, market, sell_eur, 0.0, old_amount, 0.0, 0.0, 0.0, cash+sell_eur, total, 0.0, reason]
         push!(tdb, v)
     end
 end
