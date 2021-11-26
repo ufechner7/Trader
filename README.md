@@ -34,11 +34,13 @@ https://sdobber.github.io/FA_LSTNet/
         
 
 ### TODO
-1. add rel_price to the bookings table; relative to t=0 when buying first, relative to buying when selling, relative to selling when buying second 
+1. sell all when overall performance drops 5% within 24h 
+2. plot sum of the ratings of the top 6 currencies
+3. add rel_price to the bookings table; relative to t=0 when buying first, relative to buying when selling, relative to selling when buying second 
    perhaps we should not buy when rel_price is smaller than -5% and only sell when rel_price is smaller than -5%
-2. add NLOpt to optimizer parameters like min_rating
-2. plot portefeuille !!!
-3. implement function analyze_portefeuille()
+4. add NLOpt to optimizer parameters like min_rating
+5. plot portefeuille !!!
+6. implement function analyze_portefeuille()
    - create a table that lists all our coins and their performance
    - create an optimal portefeuille
    - compare them
