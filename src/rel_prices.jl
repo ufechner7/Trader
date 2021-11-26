@@ -28,7 +28,7 @@ function rel_price_table(df, ref_time, rel_price_table = nothing; ref_market=not
                 if market==ref_market
                     course = last(df[!, market])
                     row.REF_COURSE = course
-                    println("old REL_PRIZE: ", row.REL_PRIZE, ", new REL_PRIZE: ", course/row.REF_COURSE)
+                    # println("old REL_PRIZE: ", row.REL_PRIZE, ", new REL_PRIZE: ", course/row.REF_COURSE)
                     row.REL_PRIZE = course/row.REF_COURSE
                 end
             end

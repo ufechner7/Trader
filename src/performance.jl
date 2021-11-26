@@ -27,7 +27,7 @@ function subrating(df, n, interest_function)
     return interest, deviance1, delta
 end
 
-function rating_table(df, m=8, filter=true)
+function rating_table(df, m=8; filter=true)
     n = min(60*24*4, size(df)[1])
     # create view on the last four days or less, if less than 4 days of data available
     interest_4d, deviance_4d, delta_4d = subrating(df, n, monthly_interest)

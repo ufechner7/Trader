@@ -54,6 +54,7 @@ function check(df, tdb, rp_table; prn=true)
     # create view to db with the first INDEX rows
     view = df[1:INDEX, :]
     by_hour, by_day = overview(view)
+    top_ratings=nothing
 
     # update rp_table
     time = df.TIME[INDEX]
@@ -63,7 +64,7 @@ function check(df, tdb, rp_table; prn=true)
     if mod(INDEX, 60) == 0 
         # println("==> hour")
         time = df.TIME[INDEX]
-        RATING_TAB=rating_table(view, 10000, false)
+        RATING_TAB=rating_table(view, 10000; filter=false)
         update_total(view, tdb, time)
         if INDEX > DAYS*24*60
             perf = find_performance(view, tdb, time, RATING_TAB)
@@ -117,14 +118,14 @@ function check(df, tdb, rp_table; prn=true)
             if last(perf.PERF) < 1.0 
                 if prn println("Selling: ", market) end
                 sell(view, tdb, time, market; reason="last(perf.PERF) < 1.0 "*string(round(last(perf.PERF),digits=3)))
-                rating_ = rating_table(view, 8, false)
+                top_ratings = rating_table(view, 8, filter=false)
                 
                 if INDEX < DAYS*24*60 # rating calculation is only reliable after DAYS days
                     # markets = (perf.MARKET)
                     markets = (first(sort(rp_table, [:REL_PRIZE], rev=true),6)).MARKET
                 else
-                    markets = (rating_.MARKET)
-                    if prn println(rating_) end
+                    markets = (top_ratings.MARKET)
+                    if prn println(top_ratings) end
                 end
                 cash = calc_cash(view, tdb)
                 amount_to_use = cash
@@ -161,11 +162,13 @@ function check(df, tdb, rp_table; prn=true)
 
     end
     INDEX+=1
+    top_ratings
 end
 
 function trade(df, n=0, prn=true)
     global RATING_TAB
     RATING_TAB = nothing
+    top_ratings = nothing
     if n == 0
         n = size(df)[1]
     end
@@ -178,7 +181,10 @@ function trade(df, n=0, prn=true)
         buy(view, tdb, rp_table, time, market, MAX_TRADE; reason="market in PREFER")
     end
     for i in WAIT:n
-        check(df, tdb, rp_table; prn=prn)
+        top_ratings = check(df, tdb, rp_table; prn=prn)
+    end
+    if ! isnothing(top_ratings)
+        println(top_ratings)
     end
     tdb
 end

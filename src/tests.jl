@@ -17,7 +17,7 @@ end
 function test3(df, plot=false)
     global TDB
     if isnothing(TDB)
-        tdb = trade(df, 0)
+        tdb = trade(df, 0, plot)
         TDB=tdb
     else
         tdb=TDB
