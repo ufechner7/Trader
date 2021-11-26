@@ -1,38 +1,12 @@
 using CSV, DataFrames, PyPlot, Dates, TimeZones, Impute, Statistics, GLM
 
-LOGFILES = ["log_1637352719.csv","log_1637489560.csv","log_1637573477.csv","log_1637607862.csv",
-"log_1637620607.csv", "log_1637620718.csv","log_1637620921.csv","log_1637621174.csv","log_1637661401.csv"]
-# PREFER   = ["AVAX_EUR", "SAND_EUR","VGX_EUR"]
-PREFER=[]
+# global variables
 INDEX = 1
 TDB   = nothing
-START_KAPITAL = 1000.0           # in EUR
-MAX_TRADE     = 140.0            # max EUR per trade when buying
-FEE           = 1.0 - 0.45/100.0 # 0.45% fee per trade (0.25 fee, 0.2% spread)
-MAX_RISE      =  4.3             # buy  if RISE_1h goes above this value [%]
-MIN_DROP      = -25.0            # sell if DROP_1h goes below this value [%]
-MIN_DROP_24   = -35.0            # sell if DROP_24h goes below this value [%]
-WAIT          = 60               # number of minutes to wait before dealing
-DAYS          = 4                # number of days to wait for valid rating
-MIN_RATING    = 70              # minimal rating to buy a coin
 T0            = 0
-rating_tab    = nothing
+RATING_TAB    = nothing
 
-function trade_db(df, save_eur::Float64)
-    # time, market, sell_eur, buy_eur, sell_coins, buy_coins, save_eur, withdraw_eur, cash, total, reason
-    global INDEX, T0, WAIT
-    t0 = first(df.TIME)
-    INDEX = WAIT
-    T0 = t0
-    trade_db = DataFrame(TIME=t0, REL_TIME=0.0, MARKET = "DEPOSIT", SELL_EUR=0.0, BUY_EUR=0.0, SELL_COINS=0.0, BUY_COINS=0.0, SAVE_EUR=save_eur, WITHDRAW_EUR=0.0, CASH=save_eur, TOTAL=save_eur, REASON="save_eur")
-end
-
-function update_total(df, tdb, time)
-    global T0
-    total = calc_total(df, tdb)
-    v = [time, time-T0, "", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, calc_cash(df, tdb), total, "update_total"]
-    push!(tdb, v)    
-end
+include("performance.jl")
 
 function buy(df, tdb, rp_table, time, market, amount; force=false, reason="")
     global FEE, T0
@@ -76,7 +50,7 @@ end
 
 function check(df, tdb, rp_table; prn=true)
     global INDEX, MAX_TRADE, MIN_DROP, MIN_DROP_24
-    global rating_tab
+    global RATING_TAB
     # create view to db with the first INDEX rows
     view = df[1:INDEX, :]
     by_hour, by_day = overview(view)
@@ -217,9 +191,10 @@ function main()
     end
 end
 
+include("constants.jl")
 include("basic.jl")
 include("rel_prices.jl")
-include("performance.jl")
+include("trade_db.jl")
 
 include("utils.jl")
 include("tests.jl")
