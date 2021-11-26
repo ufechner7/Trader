@@ -44,6 +44,14 @@ function rating_table(df, m=8, filter=true)
     return first(sort!(res, [:RATING], rev=true), m)
 end
 
+function rating(rating_table, market)
+    for row in eachrow(rating_table)
+        if row.MARKET == market
+            return row.RATING
+        end
+    end
+end
+
 function find_performance(view, tdb, time, rating_table=nothing)
     perf = nothing
     dict = nothing

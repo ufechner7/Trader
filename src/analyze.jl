@@ -83,10 +83,10 @@ function check(df, tdb, rp_table; prn=true)
         market = row.MARKET
         time = df.TIME[INDEX] + 10 
         if row.RISE_1h >= MAX_RISE 
-            if INDEX < DAYS*24*60 || isnothing(rating_tab) # rating calculation is only reliable after 4 days
+            if INDEX < DAYS*24*60 || isnothing(RATING_TAB) # rating calculation is only reliable after 4 days
                 buy(view, tdb, rp_table, time, market, MAX_TRADE; reason="RISE_1h >= MAX_RISE")
             else
-                rating_ = rating(rating_tab, market)
+                rating_ = rating(RATING_TAB, market)
                 if rating_ > MIN_RATING
                     buy(view, tdb, rp_table, time, market, MAX_TRADE; reason="rating_ > MIN_RATING")
                     cash=calc_cash(view,tdb)
