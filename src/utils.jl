@@ -6,6 +6,32 @@ function seconds2human(delta)
     return Dates.Hour(hours) + Dates.Minute(minutes) + Dates.Second(seconds)
 end
 
+function calc_cash(df, tdb)
+    cash = 0.0
+    for row in eachrow(tdb)
+        market1 = row.MARKET
+        if market1=="DEPOSIT"
+            cash += row.SAVE_EUR - row.WITHDRAW_EUR
+        elseif market1 != ""
+            rate1 = last(df[!, market1])
+            cash -= (row.BUY_EUR - row.SELL_EUR)
+        end
+    end    
+    cash
+end
+
+function calc_total(df, tdb)
+    total = last(tdb.CASH)
+    for row in eachrow(tdb)
+        market = row.MARKET
+        if market!="DEPOSIT" && market != ""
+            rate = last(df[!, market])
+            total+=(row.BUY_COINS - row.SELL_COINS) * rate
+        end
+    end
+    return total
+end
+
 # interest in percent, duration in seconds
 function yearly_interest(interest, duration)
     days=duration/(24*3600)

@@ -19,6 +19,17 @@ function list_markets(tdb, all=false)
     final_markets
 end
 
+function get_tdb()
+    global TDB
+    if isnothing(TDB)
+        tdb = trade(df, 0, false)
+        TDB=tdb
+    else
+        tdb=TDB
+    end
+    tdb
+end
+
 function plot_1h(df, name)
     col     = df[!, name]
     window = col[max((length(col)-60+1), 1):end]
@@ -32,13 +43,7 @@ function plot_24h(df, name)
 end
 
 function plot_total(df)
-    global TDB
-    if isnothing(TDB)
-        tdb = trade(df, 0, false)
-        TDB=tdb
-    else
-        tdb=TDB
-    end
+    tdb=get_tdb()
     xlabel("time [h]" * "               last_updated: " * last_updated(df))
     ylabel("EUR")
     plot((tdb.TIME.-T0)./3600, tdb.TOTAL, label="total")
@@ -50,13 +55,7 @@ function plot_total(df)
 end
 
 function plot_interest(df)
-    global TDB
-    if isnothing(TDB)
-        tdb=trade(df)
-        TDB=tdb
-    else
-       tdb=TDB
-    end
+    tdb = get_tdb()
     markets = list_markets(tdb)
     sell_all(df, tdb, markets)
     interest = ((tdb.TOTAL)./first(tdb.TOTAL).-1.0).*100.0
@@ -72,13 +71,7 @@ function plot_interest(df)
 end
 
 function plot_markets(df, tdb=nothing, markets=nothing)
-    global T0, TDB
-    if isnothing(TDB)
-        tdb=trade(df)
-        TDB=tdb
-    else
-        tdb=TDB
-    end
+    tdb = get_tdb()
     if isnothing(markets)
         markets = list_markets(tdb, true)
     end
@@ -97,13 +90,7 @@ function plot_markets(df, tdb=nothing, markets=nothing)
 end
 
 function plot_stacked(df, tdb=nothing)
-    global T0, TDB
-    if isnothing(TDB)
-        tdb=trade(df)
-        TDB=tdb
-    else
-        tdb=TDB
-    end
+    tdb = get_tdb()
     if isnothing(markets)
         markets = list_markets(tdb, true)
     end
