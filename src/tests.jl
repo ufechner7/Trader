@@ -14,10 +14,10 @@ function test2(df)
     tdb
 end
 
-function test3(df, plot=false)
+function test3(df; plot=false, prn=false)
     global TDB
     if isnothing(TDB)
-        tdb = trade(df, 0, plot)
+        tdb = trade(df; prn=prn)
         TDB=tdb
     else
         tdb=TDB

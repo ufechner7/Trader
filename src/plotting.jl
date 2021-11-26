@@ -22,7 +22,7 @@ end
 function get_tdb()
     global TDB
     if isnothing(TDB)
-        tdb = trade(df, 0, false)
+        tdb = trade(df; prn=false)
         TDB=tdb
     else
         tdb=TDB

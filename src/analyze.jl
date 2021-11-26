@@ -51,6 +51,7 @@ end
 function check(df, tdb, rp_table; prn=true)
     global INDEX, MAX_TRADE, MIN_DROP, MIN_DROP_24
     global RATING_TAB
+    local top_ratings
     # create view to db with the first INDEX rows
     view = df[1:INDEX, :]
     by_hour, by_day = overview(view)
@@ -108,17 +109,19 @@ function check(df, tdb, rp_table; prn=true)
     if mod(INDEX, 60*12) == 0 
         time = df.TIME[INDEX]
         perf = find_performance(view, tdb, time, RATING_TAB)
+        top_ratings = rating_table(view, 8, filter=false)
+        # println(top_ratings.RATING)
         
         if ! isnothing(perf)
             sort!(perf, [:PERF], rev=true)
             if prn println(perf) end
             market = last(perf.MARKET)
+            
             # best_markets = (first(sort(rp_table, [:REL_PRIZE], rev=true),6)).MARKET
             # if ! (market in best_markets)
             if last(perf.PERF) < 1.0 
                 if prn println("Selling: ", market) end
                 sell(view, tdb, time, market; reason="last(perf.PERF) < 1.0 "*string(round(last(perf.PERF),digits=3)))
-                top_ratings = rating_table(view, 8, filter=false)
                 
                 if INDEX < DAYS*24*60 # rating calculation is only reliable after DAYS days
                     # markets = (perf.MARKET)
@@ -165,7 +168,7 @@ function check(df, tdb, rp_table; prn=true)
     top_ratings
 end
 
-function trade(df, n=0, prn=true)
+function trade(df; n=0, prn=true)
     global RATING_TAB
     RATING_TAB = nothing
     top_ratings = nothing
@@ -182,10 +185,13 @@ function trade(df, n=0, prn=true)
     end
     for i in WAIT:n
         top_ratings = check(df, tdb, rp_table; prn=prn)
+        if ! isnothing(top_ratings)
+            println(mean(top_ratings.RATING))
+        end
     end
-    if ! isnothing(top_ratings)
-        println(top_ratings)
-    end
+    # if ! isnothing(top_ratings)
+    #     println(top_ratings)
+    # end
     tdb
 end
 
