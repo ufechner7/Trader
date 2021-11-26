@@ -63,10 +63,10 @@ function check(df, tdb, rp_table; prn=true)
     if mod(INDEX, 60) == 0 
         # println("==> hour")
         time = df.TIME[INDEX]
-        rating_tab=rating_table(view, 10000, false)
+        RATING_TAB=rating_table(view, 10000, false)
         update_total(view, tdb, time)
         if INDEX > DAYS*24*60
-            perf = find_performance(view, tdb, time, rating_tab)
+            perf = find_performance(view, tdb, time, RATING_TAB)
             for row in eachrow(perf)
                 market = row.MARKET
                 time = df.TIME[INDEX] + 10 
@@ -83,7 +83,7 @@ function check(df, tdb, rp_table; prn=true)
         market = row.MARKET
         time = df.TIME[INDEX] + 10 
         if row.RISE_1h >= MAX_RISE 
-            if INDEX < DAYS*24*60 || isnothing(RATING_TAB) # rating calculation is only reliable after 4 days
+            if INDEX < DAYS*24*60 # || isnothing(RATING_TAB) # rating calculation is only reliable after 4 days
                 buy(view, tdb, rp_table, time, market, MAX_TRADE; reason="RISE_1h >= MAX_RISE")
             else
                 rating = market_rating(RATING_TAB, market)
@@ -106,7 +106,7 @@ function check(df, tdb, rp_table; prn=true)
     # every 12h: evaluate performance, sell and buy
     if mod(INDEX, 60*12) == 0 
         time = df.TIME[INDEX]
-        perf = find_performance(view, tdb, time, rating_tab)
+        perf = find_performance(view, tdb, time, RATING_TAB)
         
         if ! isnothing(perf)
             sort!(perf, [:PERF], rev=true)
@@ -134,15 +134,15 @@ function check(df, tdb, rp_table; prn=true)
                 for market in markets   
                     flag = false
                     if INDEX >= DAYS*24*60
-                        rating_ = market_rating(rating_tab, market)
-                        flag = rating_ > MIN_RATING 
+                        rating = market_rating(RATING_TAB, market)
+                        flag = rating > MIN_RATING 
                     else 
                         performance = rel_price(rp_table, market)
                         if performance > 1.01
                             flag = true
                         end          
                     end
-                    if flag && buy(view, tdb, rp_table, time, market, amount_to_use; force=true, reason="every 12h: time < 4d or rating_ >= rating(rating_tab, market)")
+                    if flag && buy(view, tdb, rp_table, time, market, amount_to_use; force=true, reason="every 12h: time < 4d or rating_ >= rating(RATING_TAB, market)")
                        if prn println("Buying: ", market, " time: ", (time-T0)/3600) end
                        cash = calc_cash(view, tdb)
                        if cash < 0.5 * MAX_TRADE break end
@@ -161,8 +161,8 @@ function check(df, tdb, rp_table; prn=true)
 end
 
 function trade(df, n=0, prn=true)
-    global market_rating
-    rating_tab    = nothing
+    global RATING_TAB
+    RATING_TAB = nothing
     if n == 0
         n = size(df)[1]
     end
