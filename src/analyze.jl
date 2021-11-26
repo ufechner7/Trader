@@ -69,12 +69,14 @@ function check(df, tdb, rp_table; prn=true)
         update_total(view, tdb, time)
         if INDEX > DAYS*24*60
             perf = find_performance(view, tdb, time, RATING_TAB)
-            for row in eachrow(perf)
-                market = row.MARKET
-                time = df.TIME[INDEX]
-                if row.RATING < 0.75*MIN_RATING 
-                   if prn println("==> Sell: ", market) end
-                   sell(view, tdb, time, market; reason="row.RATING < 0.75*MIN_RATING")
+            if ! isnothing(perf)
+                for row in eachrow(perf)
+                    market = row.MARKET
+                    time = df.TIME[INDEX]
+                    if row.RATING < MAX_RATING 
+                        if prn println("==> Sell: ", market) end
+                        sell(view, tdb, time, market; reason="row.RATING < MAX_RATING")
+                    end
                 end
             end
         end
@@ -90,12 +92,17 @@ function check(df, tdb, rp_table; prn=true)
             else
                 rating = market_rating(RATING_TAB, market)
                 if rating > MIN_RATING
-                    buy(view, tdb, rp_table, time, market, MAX_TRADE; reason="rating > MIN_RATING")
                     cash=calc_cash(view,tdb)
-                    if cash >= 0.5*MAX_TRADE && cash < MAX_TRADE
-                        buy(view, tdb, rp_table, time, market, cash; reason="rating > MIN_RATING")
-                    else
+                    if cash >= KEEP
                         buy(view, tdb, rp_table, time, market, MAX_TRADE; reason="rating > MIN_RATING")
+                        cash=calc_cash(view,tdb)
+                        if cash >= KEEP
+                            if cash >= 0.5*MAX_TRADE && cash < MAX_TRADE
+                                buy(view, tdb, rp_table, time, market, cash; reason="rating > MIN_RATING")
+                            else
+                                buy(view, tdb, rp_table, time, market, MAX_TRADE; reason="rating > MIN_RATING")
+                            end
+                        end
                     end
                 end
             end            
