@@ -69,7 +69,7 @@ function check(df, tdb, rp_table; prn=true)
             perf = find_performance(view, tdb, time, RATING_TAB)
             for row in eachrow(perf)
                 market = row.MARKET
-                time = df.TIME[INDEX] + 10 
+                time = df.TIME[INDEX]
                 if row.RATING < 0.75*MIN_RATING 
                    if prn println("==> Sell: ", market) end
                    sell(view, tdb, time, market; reason="row.RATING < 0.75*MIN_RATING")
@@ -112,6 +112,8 @@ function check(df, tdb, rp_table; prn=true)
             sort!(perf, [:PERF], rev=true)
             if prn println(perf) end
             market = last(perf.MARKET)
+            # best_markets = (first(sort(rp_table, [:REL_PRIZE], rev=true),6)).MARKET
+            # if ! (market in best_markets)
             if last(perf.PERF) < 1.0 
                 if prn println("Selling: ", market) end
                 sell(view, tdb, time, market; reason="last(perf.PERF) < 1.0 "*string(round(last(perf.PERF),digits=3)))
@@ -119,7 +121,7 @@ function check(df, tdb, rp_table; prn=true)
                 
                 if INDEX < DAYS*24*60 # rating calculation is only reliable after DAYS days
                     # markets = (perf.MARKET)
-                    markets = (first(sort(rp_table, [:REL_PRIZE], rev=true),12)).MARKET
+                    markets = (first(sort(rp_table, [:REL_PRIZE], rev=true),6)).MARKET
                 else
                     markets = (rating_.MARKET)
                     if prn println(rating_) end
@@ -140,12 +142,13 @@ function check(df, tdb, rp_table; prn=true)
                         performance = rel_price(rp_table, market)
                         if performance > 1.01
                             flag = true
-                        end          
+                        end
+                        flag = true          
                     end
                     if flag && buy(view, tdb, rp_table, time, market, amount_to_use; force=true, reason="every 12h: time < 4d or rating_ >= rating(RATING_TAB, market)")
-                       if prn println("Buying: ", market, " time: ", (time-T0)/3600) end
-                       cash = calc_cash(view, tdb)
-                       if cash < 0.5 * MAX_TRADE break end
+                        if prn println("Buying: ", market, " time: ", (time-T0)/3600) end
+                        cash = calc_cash(view, tdb)
+                        if cash < 0.5 * MAX_TRADE break end
                         amount_to_use = cash
                         if cash >= MAX_TRADE
                             amount_to_use = MAX_TRADE
