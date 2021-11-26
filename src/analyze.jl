@@ -85,7 +85,7 @@ function check(df, tdb, rp_table; prn=true)
     # every minute: buy and sell if required
     for row in eachrow(by_hour)
         market = row.MARKET
-        time = df.TIME[INDEX] + 10 
+        time = df.TIME[INDEX]
         if row.RISE_1h >= MAX_RISE 
             if INDEX < DAYS*24*60 # || isnothing(RATING_TAB) # rating calculation is only reliable after 4 days
                 buy(view, tdb, rp_table, time, market, MAX_TRADE; reason="RISE_1h >= MAX_RISE")
@@ -112,8 +112,8 @@ function check(df, tdb, rp_table; prn=true)
         end
     end
 
-    # every 12h: evaluate performance, sell and buy
-    if mod(INDEX, 60*12) == 0 
+    # every INTERVAL hours: evaluate performance, sell and buy
+    if mod(INDEX, 60*INTERVAL) == 0 
         time = df.TIME[INDEX]
         perf = find_performance(view, tdb, time, RATING_TAB)
         top_ratings = rating_table(view, 8, filter=false)

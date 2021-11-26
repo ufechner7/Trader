@@ -10,8 +10,9 @@ const MIN_DROP      = -25.0            # sell if DROP_1h goes below this value [
 const MIN_DROP_24   = -35.0            # sell if DROP_24h goes below this value [%]
 const WAIT          = 60               # number of minutes to wait before dealing
 const DAYS          = 4                # number of days to wait for valid rating
-MIN_RATING          = 19               # minimal rating to buy a coin
+MIN_RATING          = 20               # minimal rating to buy a coin; 
 MAX_RATING          = 0.75*MIN_RATING  # maximal rating to sell a coin
+INTERVAL            = 6                # intervall between evaluations in hours
 
 # array constants
 PREFER = String[]
