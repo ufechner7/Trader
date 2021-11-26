@@ -44,7 +44,7 @@ function rating_table(df, m=8, filter=true)
     return first(sort!(res, [:RATING], rev=true), m)
 end
 
-function rating(rating_table, market)
+function market_rating(rating_table, market)
     for row in eachrow(rating_table)
         if row.MARKET == market
             return row.RATING
@@ -81,7 +81,7 @@ function find_performance(view, tdb, time, rating_table=nothing)
         if initial > 0.001 && total > 0.001
             performance = total / initial
             if ! isnothing(rating_table)
-                rating_ = rating(rating_table, market)
+                rating_ = market_rating(rating_table, market)
                 if isnothing(rating_)
                     rating_=-1.0
                 end
