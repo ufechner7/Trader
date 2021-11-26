@@ -19,12 +19,19 @@ T0            = 0
 rating_tab    = nothing
 
 function trade_db(df, save_eur::Float64)
-    # time, market, sell_eur, buy_eur, sell_coins, buy_coins, save_eur, withdraw_eur, total
+    # time, market, sell_eur, buy_eur, sell_coins, buy_coins, save_eur, withdraw_eur, cash, total, reason
     global INDEX, T0, WAIT
     t0 = first(df.TIME)
     INDEX = WAIT
     T0 = t0
     trade_db = DataFrame(TIME=t0, REL_TIME=0.0, MARKET = "DEPOSIT", SELL_EUR=0.0, BUY_EUR=0.0, SELL_COINS=0.0, BUY_COINS=0.0, SAVE_EUR=save_eur, WITHDRAW_EUR=0.0, CASH=save_eur, TOTAL=save_eur, REASON="save_eur")
+end
+
+function update_total(df, tdb, time)
+    global T0
+    total = calc_total(df, tdb)
+    v = [time, time-T0, "", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, calc_cash(df, tdb), total, "update_total"]
+    push!(tdb, v)    
 end
 
 function buy(df, tdb, rp_table, time, market, amount; force=false, reason="")
@@ -44,13 +51,6 @@ function buy(df, tdb, rp_table, time, market, amount; force=false, reason="")
     return false
 end
 
-function update_total(df, tdb, time)
-    global T0
-    total = calc_total(df, tdb)
-    v = [time, time-T0, "", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, calc_cash(df, tdb), total, "update_total"]
-    push!(tdb, v)    
-end
-
 # sell all coins of a given market
 function sell(df, tdb, time, market; reason="")
     global T0
@@ -67,112 +67,10 @@ function sell(df, tdb, time, market; reason="")
     end
 end
 
-
-
 function sell_all(df, tdb, markets)
     time = last(df.TIME)
     for market in markets
         sell(df, tdb, time, market)
-    end
-end
-
-function find_performance(view, tdb, time, rating_table=nothing)
-    perf = nothing
-    dict = nothing
-    for row in eachrow(tdb)
-        total = 0.0
-        initial = 0.0
-        market = row.MARKET
-        if market!="DEPOSIT" && market != ""
-            rate = last(view[!, market])
-            initial += row.BUY_EUR
-            total+=(row.BUY_COINS - row.SELL_COINS) * rate
-        end
-        if isnothing(dict)
-            dict = Dict(market => (initial, total))
-        else
-            if haskey(dict, market)
-                ini,tot = dict[market]
-                dict[market] = (ini + initial, tot +  total)
-            else
-                dict[market] = (initial, total)
-            end
-        end
-    end
-    for market in collect(keys(dict))
-        initial, total = dict[market]
-        rating_ = 0.0
-        if initial > 0.001 && total > 0.001
-            performance = total / initial
-            if ! isnothing(rating_table)
-                rating_ = rating(rating_table, market)
-                if isnothing(rating_)
-                    rating_=-1.0
-                end
-            end
-            rel_time=(time-T0)/3600.0
-            if isnothing(perf)
-                perf = DataFrame(TIME=time, REL_TIME=rel_time, MARKET = market, PERF=performance, RATING=rating_)
-            else
-                v = [time, rel_time, market, performance, rating_]
-                push!(perf, v)
-            end
-        end
-    end
-    return perf
-end
-
-function subrating(df, n, interest_function)
-    markets = names(df)[2:end]
-    interest = Float64[]
-    deviance1 = Float64[]
-    delta = Float64[]
-    view = last(df, n)
-    delta_t = view.TIME[end]-view.TIME[1] # timespan in seconds
-    for market in markets
-        y = view[!, market] 
-        x = view.TIME .- T0
-        X = [ones(n) x]
-        y_rel = y./y[1]*100.0
-        x = X[:,2]
-        model = GLM.fit(LinearModel, X, y_rel, dropcollinear=true)
-        b = GLM.coef(model)[1]
-        beta = GLM.coef(model)[2]
-        dev  = deviance(model)/n
-        current_course = df[!, market]
-        # plot(X[:,2], y_rel)
-        # plot(X[:,2], predict(model))
-        # (current_course - predicted_course)/predicted_course*100.0
-        delta_y = y_rel[end] - (b + (beta * x[end])) 
-        push!(interest, interest_function(beta * delta_t, delta_t))
-        push!(deviance1, dev)
-        push!(delta, delta_y)
-    end
-    return interest, deviance1, delta
-end
-
-function rating_table(df, m=8, filter=true)
-    n = min(60*24*4, size(df)[1])
-    # create view on the last four days or less, if less than 4 days of data available
-    interest_4d, deviance_4d, delta_4d = subrating(df, n, monthly_interest)
-    # create view on the last day or less, if less than 1 day of data available
-    n = min(60*24, size(df)[1])
-    interest_1d, deviance_1d, delta_1d = subrating(df, n, weekly_interest)
-    interest_1d = min.(100000.0, interest_1d)
-    markets = names(df)[2:end]
-    final_rating = (interest_4d./(3.162.*sqrt.(max.(deviance_4d, 10.0)./10.0)) .+ 0.00.*interest_1d./max.(deviance_1d, 10.0))
-    res = DataFrame(MARKET = markets, MONTHLY_INTEREST_4d = interest_4d, DEVIANCE_4d = deviance_4d, DELTA_4d = delta_4d, WEEKLY_INTEREST_1d = interest_1d, DEVIANCE_1d = deviance_1d, DELTA_1d = delta_1d, RATING=final_rating)
-    if filter
-         filter!(row -> row.DELTA_4d > 0.0, res)
-    end
-    return first(sort!(res, [:RATING], rev=true), m)
-end
-
-function rating(rating_table, market)
-    for row in eachrow(rating_table)
-        if row.MARKET == market
-            return row.RATING
-        end
     end
 end
 
@@ -187,8 +85,8 @@ function check(df, tdb, rp_table; prn=true)
     time = df.TIME[INDEX]
     rel_price_table(df, time, rp_table)
 
-
-    if mod(INDEX, 60) == 0 # every hour
+    # every hour
+    if mod(INDEX, 60) == 0 
         # println("==> hour")
         time = df.TIME[INDEX]
         rating_tab=rating_table(view, 10000, false)
@@ -205,7 +103,8 @@ function check(df, tdb, rp_table; prn=true)
             end
         end
     end
-    # buy and sell if required
+
+    # every minute: buy and sell if required
     for row in eachrow(by_hour)
         market = row.MARKET
         time = df.TIME[INDEX] + 10 
@@ -230,7 +129,8 @@ function check(df, tdb, rp_table; prn=true)
         end
     end
 
-    if mod(INDEX, 60*12) == 0 # every 12h
+    # every 12h: evaluate performance, sell and buy
+    if mod(INDEX, 60*12) == 0 
         time = df.TIME[INDEX]
         perf = find_performance(view, tdb, time, rating_tab)
         
@@ -319,6 +219,7 @@ end
 
 include("basic.jl")
 include("rel_prices.jl")
+include("performance.jl")
 
 include("utils.jl")
 include("tests.jl")
