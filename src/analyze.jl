@@ -37,7 +37,7 @@ function buy(df, tdb, rp_table, time, market, amount; force=false, reason="")
         coins = amount / rate * FEE
         total = calc_total(df, tdb) + coins * rate - amount
         v = [time, (time-T0)/3600, market, 0.0, amount, 0.0, coins, 0.0, 0.0, cash-amount, total, reason]
-        rel_prize_table(df, time, rp_table; ref_market=market)
+        rel_price_table(df, time, rp_table; ref_market=market)
         push!(tdb, v)
         return true
     end
@@ -122,54 +122,6 @@ function find_performance(view, tdb, time, rating_table=nothing)
     return perf
 end
 
-
-# return a table of all markets and their performance
-# fields: MARKET, COURSE, REF_COURSE, REF_TIME, REL_PRIZE
-# ref_market should be passed only when buying a coin the first time
-function rel_prize_table(df, ref_time, rel_prize_table = nothing; ref_market=nothing)
-    markets = names(df)[2:end]
-    if isnothing(rel_prize_table)
-        init = true
-    else
-        init = false
-    end
-    if init
-        for market in markets
-            ref_course = first(df[!, market])
-            if isnothing(rel_prize_table)
-                rel_prize_table = DataFrame(MARKET = market, REF_COURSE=ref_course, REF_TIME=ref_time, REL_PRIZE=1.0)
-            else
-                rel_prize = 1.0
-                v = [market, ref_course, ref_time, rel_prize]
-                push!(rel_prize_table, v)
-            end
-        end
-    else
-        if ! isnothing(ref_market)
-            for row in eachrow(rel_prize_table)
-                market=row.MARKET
-                if market==ref_market
-                    course = last(df[!, market])
-                    row.REF_COURSE = course
-                    println("old REL_PRIZE: ", row.REL_PRIZE, ", new REL_PRIZE: ", course/row.REF_COURSE)
-                    row.REL_PRIZE = course/row.REF_COURSE
-                end
-            end
-        else
-            for row in eachrow(rel_prize_table)
-                market=row.MARKET
-                course = last(df[!, market])
-                row.REL_PRIZE = course/row.REF_COURSE
-            end
-        end
-    end
-    rel_prize_table
-end
-
-function rel_prize(rel_prize_table, market)
-    rel_prize_table[(rel_prize_table.MARKET .== market), :REL_PRIZE][1]
-end
-
 function subrating(df, n, interest_function)
     markets = names(df)[2:end]
     interest = Float64[]
@@ -233,7 +185,7 @@ function check(df, tdb, rp_table; prn=true)
 
     # update rp_table
     time = df.TIME[INDEX]
-    rel_prize_table(df, time, rp_table)
+    rel_price_table(df, time, rp_table)
 
 
     if mod(INDEX, 60) == 0 # every hour
@@ -311,7 +263,7 @@ function check(df, tdb, rp_table; prn=true)
                         rating_ = rating(rating_tab, market)
                         flag = rating_ > MIN_RATING 
                     else 
-                        performance = rel_prize(rp_table, market)
+                        performance = rel_price(rp_table, market)
                         if performance > 1.01
                             flag = true
                         end          
@@ -343,7 +295,7 @@ function trade(df, n=0, prn=true)
     tdb = trade_db(df, START_KAPITAL)
 
     time = df.TIME[INDEX] + 10 
-    rp_table = rel_prize_table(df, time)
+    rp_table = rel_price_table(df, time)
     view = df[1:INDEX, :]
     for market in PREFER
         buy(view, tdb, rp_table, time, market, MAX_TRADE; reason="market in PREFER")
@@ -366,6 +318,8 @@ function main()
 end
 
 include("basic.jl")
+include("rel_prices.jl")
+
 include("utils.jl")
 include("tests.jl")
 include("plotting.jl")

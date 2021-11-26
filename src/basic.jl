@@ -1,4 +1,4 @@
-# basic Statistics
+# Basic statistics
 
 function rise_1h(df, name)
     col     = df[!, name]
