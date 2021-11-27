@@ -1,5 +1,26 @@
 # Basic statistics
 
+const NoDataFrame = Union{Nothing, DataFrame}
+
+@enum Mode INIT=1 RATING=2 MIXED=3 STOPPED=4
+
+@with_kw mutable struct State @deftype Int64
+   t0                =  0                  # start time [s]
+   index             =  1                  # last index of the input data frame
+   mode::Mode        = INIT
+   df::NoDataFrame              = nothing  # input data frame
+   tdb::NoDataFrame             = nothing  # trading data frame
+   rdb::NoDataFrame             = nothing  # rating data frame
+   rel_price_table::NoDataFrame = nothing  # prices relative to buying time
+   markets::Vector{String}      = []       # currently owned coins
+end
+
+function State(df)
+    st=State()
+    st.df = df
+    st
+end
+
 function rise_1h(df, name)
     col     = df[!, name]
     window = col[max((length(col)-60+1), 1):end]

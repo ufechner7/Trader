@@ -7,22 +7,7 @@ T0            = 0
 RATING_TAB    = nothing
 STOP          = false      
 
-const NoDataFrame = Union{Nothing, DataFrame}
 
-@enum Mode INIT=1 RATING=2 MIXED=3 STOPPED=4
-
-@with_kw mutable struct State @deftype Int64
-   t0                =  0                  # start time [s]
-   index             =  1                  # last index of the input data frame
-   mode::Mode        = INIT
-   df                = nothing             # input data frame
-   tdb::NoDataFrame  = nothing             # trading data frame
-   rdb::NoDataFrame  = nothing             # rating data frame
-   rel_price_table::NoDataFrame = nothing  # prices relative to buying time
-   markets::Vector{String}      = []       # currently owned coins
-end
-
-include("performance.jl")
 
 function buy(df, tdb, rp_table, time, market, amount; force=false, reason="")
     global FEE, T0
@@ -235,20 +220,21 @@ function trade(df; n=0, prn=true)
     tdb
 end
 
-function main()
+function main(st)
     if true
-        by_hour, by_day = overview(df)
+        by_hour, by_day = overview(st.df)
         println(by_hour)
         println(by_day)
     else
-        tdb=test3(df)
-        plot_total(tdb)
+        tdb=test3(st.df)
+        plot_total(st.tdb)
     end
 end
 
 include("constants.jl")
 include("basic.jl")
 include("rel_prices.jl")
+include("performance.jl")
 include("trade_db.jl")
 
 include("utils.jl")
@@ -256,7 +242,7 @@ include("tests.jl")
 include("plotting.jl")
 include("logging.jl")
 
-df = read_log(logfiles())
-main()
+st = State(read_log(logfiles()))
+main(st)
 
 # p1 = plot(df.BTC_EUR, label="BTC_EUR")

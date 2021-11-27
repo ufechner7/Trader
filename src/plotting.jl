@@ -19,33 +19,34 @@ function list_markets(tdb, all=false)
     final_markets
 end
 
-function get_tdb()
-    global TDB
-    if isnothing(TDB)
-        tdb = trade(df; prn=false)
-        TDB=tdb
+function get_tdb(st)
+    if isnothing(st.tdb)
+        tdb = trade(st.df; prn=false)
+        st.tdb=tdb
     else
-        tdb=TDB
+        tdb=st.tdb
     end
     tdb
 end
 
-function plot_1h(df, name)
-    col     = df[!, name]
+function plot_1h(st, name)
+    col     = st.df[!, name]
     window = col[max((length(col)-60+1), 1):end]
     plot(window, label=name)
+    nothing
 end
 
-function plot_24h(df, name)
-    col     = df[!, name]
+function plot_24h(st, name)
+    col     = st.df[!, name]
     window = col[max((length(col)-24*60+1), 1):end]
     plot(window, label=name)
+    nothing
 end
 
-function plot_total(df)
-    tdb=get_tdb()
+function plot_total(st)
+    tdb=get_tdb(st)
     figure()
-    xlabel("time [h]" * "               last_updated: " * last_updated(df))
+    xlabel("time [h]" * "               last_updated: " * last_updated(st.df))
     ylabel("EUR")
     plot((tdb.TIME.-T0)./3600, tdb.TOTAL, label="total")
     plot((tdb.TIME.-T0)./3600, tdb.CASH, label="cash")
@@ -55,10 +56,10 @@ function plot_total(df)
     nothing
 end
 
-function plot_interest(df)
-    tdb = get_tdb()
+function plot_interest(st)
+    tdb = get_tdb(st)
     markets = list_markets(tdb)
-    sell_all(df, tdb, markets)
+    sell_all(st.df, tdb, markets)
     interest = ((tdb.TOTAL)./first(tdb.TOTAL).-1.0).*100.0
     duration = (tdb.TIME) .- first(tdb.TIME)
     monthly = monthly_interest.(interest, duration)
@@ -66,17 +67,17 @@ function plot_interest(df)
     ax = plt.gca()
     ax.set_ylim([0, 600])
     ax.set_xlim([80, (last(tdb.TIME)-T0)/3600])
-    xlabel("time [h]" * "               last_updated: " * last_updated(df))
+    xlabel("time [h]" * "               last_updated: " * last_updated(st.df))
     plot((tdb.TIME.-T0)./3600, monthly)
     title("Monthly interest [%]\n")
     grid("on")
     nothing
 end
 
-function plot_rating(df)
-    tdb = get_tdb()
-    y = TDB[TDB.MARKET .== "", :MEAN_RATING]
-    x = TDB[TDB.MARKET .== "", :TIME]
+function plot_rating(st)
+    tdb = get_tdb(st)
+    y = tdb[tdb.MARKET .== "", :MEAN_RATING]
+    x = tdb[tdb.MARKET .== "", :TIME]
     figure()
     plot((x[96:end].-T0)./3600, y[96:end])
     title("Hourly mean performance of top markets")
@@ -84,19 +85,20 @@ function plot_rating(df)
     nothing
 end
 
-function plot_markets(df; tdb=nothing, markets=nothing)
-    tdb = get_tdb()
-    if isnothing(markets)
-        markets = list_markets(tdb, true)
+function plot_markets(st)
+    tdb = get_tdb(st)
+    if length(st.markets) == 0
+        st.markets = list_markets(tdb, true)
     end
-    x=(df.TIME .- T0)./360
+    x = (st.df.TIME .- T0)./360
     figure()
     xlabel("time [h]")
     ylabel("performance [%]")
     # stackplot(x,y1, y2, y3, labels=['A','B','C'])
-    for market in markets
-        ref = first(df[!, market])
-        y=((df[!, market]/ref).-1.0) .* 100.0
+    for market in st.markets
+        println(market)
+        ref = first(st.df[!, market])
+        y=((st.df[!, market]/ref).-1.0) .* 100.0
         plot(x, y, label = market)
     end
     legend(loc="upper left")
@@ -104,10 +106,10 @@ function plot_markets(df; tdb=nothing, markets=nothing)
     nothing
 end
 
-function plot_stacked(df, tdb=nothing)
+function plot_stacked(st)
     tdb = get_tdb()
     if isnothing(markets)
         markets = list_markets(tdb, true)
     end
-    x=(df.TIME .- T0)./360
+    x=(st.df.TIME .- T0)./360
 end

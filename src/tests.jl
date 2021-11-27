@@ -14,20 +14,14 @@ function test2(df)
     tdb
 end
 
-function test3(df; plot=false, prn=false)
-    global TDB
-    if isnothing(TDB)
-        tdb = trade(df; prn=prn)
-        TDB=tdb
-    else
-        tdb=TDB
-    end
+function test3(st; plot=false, prn=false)
+    tdb=get_tdb(st)
     markets = list_markets(tdb)
-    sell_all(df, tdb, markets)
+    sell_all(st.df, tdb, markets)
 
     if plot
         push!(markets, "BTC_EUR")
-        return plot_markets(df, tdb, markets)
+        return plot_markets(st.df, tdb, markets)
     else
         tdb2 = filter(row -> row.MARKET != "", tdb)
         interest = (last(tdb.TOTAL)/first(tdb.TOTAL)-1.0)*100.0
