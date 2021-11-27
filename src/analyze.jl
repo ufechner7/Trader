@@ -11,12 +11,15 @@ const NoDataFrame = Union{Nothing, DataFrame}
 
 @enum Mode INIT=1 RATING=2 MIXED=3 STOPPED=4
 
-
 @with_kw mutable struct State @deftype Int64
-   t0              =  0
-   index           =  1
-   mode::Mode      = INIT
-   rel_price_table::NoDataFrame = nothing
+   t0                =  0                  # start time [s]
+   index             =  1                  # last index of the input data frame
+   mode::Mode        = INIT
+   df                = nothing             # input data frame
+   tdb::NoDataFrame  = nothing             # trading data frame
+   rdb::NoDataFrame  = nothing             # rating data frame
+   rel_price_table::NoDataFrame = nothing  # prices relative to buying time
+   markets::Vector{String}      = []       # currently owned coins
 end
 
 include("performance.jl")
@@ -222,7 +225,7 @@ function trade(df; n=0, prn=true)
             #     break
         end
         if STOP
-            if j > 60*24*2
+            if j > 60*24*1.5
                 STOP=false
                  println("START at ", (time-T0)/3600)
             end
