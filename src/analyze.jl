@@ -32,10 +32,11 @@ function sell(st, view, market; reason="")
     end
 end
 
-function sell_all(st, view, markets)
+# sell all coins of a given list of markets
+function sell_all(st, view, markets; reason="")
     st.stopped = true
     for market in markets
-        sell(st, view, market)
+        sell(st, view, market; reason=reason)
     end
 end
 
@@ -185,7 +186,7 @@ function trade(st; n=0, prn=true)
             view = st.df[1:st.index, :]
             println(overview(view))
             println(markets)
-            sell_all(st, view, markets)
+            sell_all(st, view, markets; reason="total falling > STOP_LIMIT")
             # update_total(st, view, time)
         end
         if st.stopped
