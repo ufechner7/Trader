@@ -179,6 +179,7 @@ function trade(st; n=0, prn=true)
         check(st, rp_table; prn=prn)
         if ! st.stopped && i > 60*24*4 && last(st.tdb.TOTAL)/maximum(st.tdb.TOTAL[end-12:end]) < STOP_LIMIT
             st.stopped=true
+            j=0
             println("STOP at ", (st.rel_time)/3600)
             markets = list_markets(st.tdb)
             view = st.df[1:st.index, :]

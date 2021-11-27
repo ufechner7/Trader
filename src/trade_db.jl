@@ -7,7 +7,7 @@ end
 function update_total(st, view, time)
     total = calc_total(view, st.tdb)
     RATING_TAB = rating_table(view, 10000; filter=false)
-    top_ratings = (first(sort(RATING_TAB, [:RATING], rev=true), 8).RATING)
+    top_ratings = (first(sort(RATING_TAB, [:RATING2], rev=true), 8).RATING)
     mean_rating = mean(top_ratings)
     v = [time, (time-st.t0)/3600, "", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, calc_cash(view, st.tdb), total, mean_rating, "update_total"]
     push!(st.tdb, v)    
