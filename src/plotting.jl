@@ -59,7 +59,7 @@ end
 function plot_interest(st)
     tdb = get_tdb(st)
     markets = list_markets(tdb)
-    sell_all(st, markets)
+    sell_all(st, st.df, markets)
     interest = ((tdb.TOTAL)./first(tdb.TOTAL).-1.0).*100.0
     duration = (tdb.TIME) .- first(tdb.TIME)
     monthly = monthly_interest.(interest, duration)

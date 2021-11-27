@@ -10,14 +10,14 @@ function test2(st)
     markets = ["MLN_EUR", "ALICE_EUR"]
     st.tdb=trade(st, n=60)
     view = st.df[1:st.index, :]
-    sell_all(st, markets)
+    sell_all(st, st.df, markets)
     st.tdb
 end
 
 function test3(st; plot=false, prn=false)
     tdb=get_tdb(st)
     markets = list_markets(tdb)
-     sell_all(st, markets)
+    sell_all(st, st.df, markets)
 
     if plot
         push!(markets, "BTC_EUR")
@@ -38,7 +38,7 @@ function test3b(st; plot=false)
     st.wait = 4*60
     tdb = get_tdb(st)
     markets = list_markets(tdb)
-    sell_all(st, markets)
+    sell_all(st, st.df, markets)
 
     if plot
         push!(markets, "BTC_EUR")
@@ -56,13 +56,13 @@ function test3b(st; plot=false)
     st.wait = 60
 end
 
-function test4(df)
+function test4(st)
     tdb=trade(st)
     markets = list_markets(tdb)
     plot_markets(st.df)
 end
 
-function test5(df)
+function test5(st)
     global WAIT
     totals = Float64[]
     for i in 1:46

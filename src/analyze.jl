@@ -37,11 +37,11 @@ function sell(st, view, time, market; reason="")
     end
 end
 
-function sell_all(st, markets)
+function sell_all(st, view, markets)
     global STOP = true
-    time = last(st.df.TIME)
+    time = st.df.TIME[st.index]
     for market in markets
-        sell(st, st.df, time, market)
+        sell(st, view, time, market)
     end
 end
 
@@ -61,7 +61,6 @@ function check(st, rp_table; prn=true)
     # every hour
     if mod(st.index, 60) == 0 
         # println("==> hour")
-        time = st.df.TIME[st.index]
         RATING_TAB=rating_table(view, 10000; filter=false)
         update_total(st, view, time)
         if st.index > DAYS*24*60
@@ -69,7 +68,6 @@ function check(st, rp_table; prn=true)
             if ! isnothing(perf)
                 for row in eachrow(perf)
                     market = row.MARKET
-                    time = st.df.TIME[st.index]
                     if row.RATING < MAX_RATING 
                         if prn println("==> Sell: ", market) end
                         sell(st, view, time, market; reason="row.RATING < MAX_RATING")
@@ -82,7 +80,6 @@ function check(st, rp_table; prn=true)
     # every minute: buy and sell if required
     for row in eachrow(by_hour)
         market = row.MARKET
-        time = st.df.TIME[st.index]
         if ! STOP && row.RISE_1h >= MAX_RISE 
             if st.index < DAYS*24*60 
                 buy(st, view, rp_table, time, market, MAX_TRADE; reason="RISE_1h >= MAX_RISE")
@@ -111,7 +108,6 @@ function check(st, rp_table; prn=true)
 
     # every INTERVAL hours: evaluate performance, sell and buy
     if mod(st.index, 60*INTERVAL) == 0 
-        time = st.df.TIME[st.index]
         perf = find_performance(view, st.tdb, time, RATING_TAB)
         top_ratings = rating_table(view, 8, filter=false)
         # println(top_ratings.RATING)
@@ -168,7 +164,6 @@ function check(st, rp_table; prn=true)
         end
 
     end
-    st.index+=1
     top_ratings
 end
 
@@ -196,13 +191,12 @@ function trade(st; n=0, prn=true)
         if ! STOP && i > 60*24*4 && last(st.tdb.TOTAL)/maximum(st.tdb.TOTAL[end-12:end]) < STOP_LIMIT
             STOP=true
             println("STOP at ", (time-st.t0)/3600)
-            #     update_total(view, tdb, time)
             markets = list_markets(st.tdb)
             view = st.df[1:st.index, :]
             println(overview(view))
             println(markets)
-            sell_all(st, markets)
-            #     break
+            sell_all(st, view, markets)
+            # update_total(st, view, time)
         end
         if STOP
             if j > 60*24*1.5
@@ -211,7 +205,9 @@ function trade(st; n=0, prn=true)
             end
             j += 1
         end
+        st.index += 1
     end
+    st.index -= 1
     st.tdb
 end
 
