@@ -33,8 +33,20 @@ function Base.getproperty(st::State, sym::Symbol)
         t0 = getfield(st, :t0)
         index = getfield(st, :index)
         df.TIME[index]-t0    
+    elseif sym == :stopped
+        mode = getfield(st, :mode)
+        mode == STOPPED
     else
         getfield(st, sym)
+    end
+end
+
+function Base.setproperty!(st::State, sym::Symbol, value::Bool)
+    if sym == :stopped
+        @assert value "If you want to leave the state STOPPED set the field mode instead!"
+        setfield!(st, :mode, STOPPED)
+    else
+        setfield!(st, sym, value)    
     end
 end
 

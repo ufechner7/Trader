@@ -3,7 +3,6 @@ using CSV, DataFrames, PyPlot, Dates, TimeZones, Impute, Statistics, GLM, Parame
 # global variables
 TDB   = nothing
 RATING_TAB    = nothing
-STOP          = false      
 
 function buy(st, view, rp_table, market, amount; force=false, reason="")
     global FEE
@@ -38,7 +37,7 @@ function sell(st, view, market; reason="")
 end
 
 function sell_all(st, view, markets)
-    global STOP = true
+    st.stopped = true
     for market in markets
         sell(st, view, market)
     end
@@ -46,7 +45,7 @@ end
 
 function check(st, rp_table; prn=true)
     global MAX_TRADE, MIN_DROP, MIN_DROP_24
-    global RATING_TAB, STOP
+    global RATING_TAB
     local top_ratings
     # create view to db with the first st.index rows
     view = st.df[1:st.index, :]
@@ -78,7 +77,7 @@ function check(st, rp_table; prn=true)
     # every minute: buy and sell if required
     for row in eachrow(by_hour)
         market = row.MARKET
-        if ! STOP && row.RISE_1h >= MAX_RISE 
+        if ! st.stopped && row.RISE_1h >= MAX_RISE 
             if st.index < DAYS*24*60 
                 buy(st, view, rp_table, market, MAX_TRADE; reason="RISE_1h >= MAX_RISE")
             else
@@ -147,7 +146,7 @@ function check(st, rp_table; prn=true)
                         end
                         flag = true          
                     end
-                    if ! STOP && flag && buy(st, view, rp_table, market, amount_to_use; force=true, reason="every 12h: time < 4d or rating_ >= rating(RATING_TAB, market)")
+                    if ! st.stopped && flag && buy(st, view, rp_table, market, amount_to_use; force=true, reason="every 12h: time < 4d or rating_ >= rating(RATING_TAB, market)")
                         if prn println("Buying: ", market, " time: ", (st.rel_time)/3600) end
                         cash = calc_cash(view, st.tdb)
                         if cash < 0.5 * MAX_TRADE break end
@@ -167,7 +166,7 @@ end
 
 function trade(st; n=0, prn=true)
     global RATING_TAB
-    global STOP = false
+    st.mode=INIT
     RATING_TAB = nothing
     top_ratings = nothing
     if n == 0
@@ -184,8 +183,8 @@ function trade(st; n=0, prn=true)
     j = 0
     for i in st.wait:n
         check(st, rp_table; prn=prn)
-        if ! STOP && i > 60*24*4 && last(st.tdb.TOTAL)/maximum(st.tdb.TOTAL[end-12:end]) < STOP_LIMIT
-            STOP=true
+        if ! st.stopped && i > 60*24*4 && last(st.tdb.TOTAL)/maximum(st.tdb.TOTAL[end-12:end]) < STOP_LIMIT
+            st.stopped=true
             println("STOP at ", (st.rel_time)/3600)
             markets = list_markets(st.tdb)
             view = st.df[1:st.index, :]
@@ -194,9 +193,9 @@ function trade(st; n=0, prn=true)
             sell_all(st, view, markets)
             # update_total(st, view, time)
         end
-        if STOP
+        if st.stopped
             if j > 60*24*1.5
-                STOP=false
+                st.mode = MIXED
                  println("START at ", (st.rel_time)/3600)
             end
             j += 1
