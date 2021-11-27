@@ -13,6 +13,7 @@ const DAYS          = 4                # number of days to wait for valid rating
 MIN_RATING          = 20               # minimal rating to buy a coin; 
 MAX_RATING          = 0.75*MIN_RATING  # maximal rating to sell a coin
 INTERVAL            = 6                # intervall between evaluations in hours
+STOP_LIMIT          = 0.96             # if total drops below STOP_LIMIT * maximum, then STOP
 
 # array constants
 PREFER = String[]

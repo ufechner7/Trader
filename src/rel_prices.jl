@@ -1,5 +1,3 @@
-
-
 # Create a table of all markets and their prize development
 # fields: MARKET, COURSE, REF_COURSE, REF_TIME, REL_PRIZE
 # ref_market should be passed only when buying a coin

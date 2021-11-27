@@ -13,6 +13,6 @@ function update_total(df, tdb, time)
     RATING_TAB = rating_table(df, 10000; filter=false)
     top_ratings = (first(sort(RATING_TAB, [:RATING], rev=true), 8).RATING)
     mean_rating = mean(top_ratings)
-    v = [time, time-T0, "", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, calc_cash(df, tdb), total, mean_rating, "update_total"]
+    v = [time, (time-T0)/3600, "", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, calc_cash(df, tdb), total, mean_rating, "update_total"]
     push!(tdb, v)    
 end

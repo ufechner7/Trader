@@ -1,10 +1,23 @@
-using CSV, DataFrames, PyPlot, Dates, TimeZones, Impute, Statistics, GLM
+using CSV, DataFrames, PyPlot, Dates, TimeZones, Impute, Statistics, GLM, Parameters
 
 # global variables
 INDEX = 1
 TDB   = nothing
 T0            = 0
 RATING_TAB    = nothing
+STOP          = false      
+
+const NoDataFrame = Union{Nothing, DataFrame}
+
+@enum Mode INIT=1 RATING=2 MIXED=3 STOPPED=4
+
+
+@with_kw mutable struct State @deftype Int64
+   t0              =  0
+   index           =  1
+   mode::Mode      = INIT
+   rel_price_table::NoDataFrame = nothing
+end
 
 include("performance.jl")
 
@@ -42,6 +55,7 @@ function sell(df, tdb, time, market; reason="")
 end
 
 function sell_all(df, tdb, markets)
+    global STOP = true
     time = last(df.TIME)
     for market in markets
         sell(df, tdb, time, market)
@@ -50,7 +64,7 @@ end
 
 function check(df, tdb, rp_table; prn=true)
     global INDEX, MAX_TRADE, MIN_DROP, MIN_DROP_24
-    global RATING_TAB
+    global RATING_TAB, STOP
     local top_ratings
     # create view to db with the first INDEX rows
     view = df[1:INDEX, :]
@@ -86,12 +100,12 @@ function check(df, tdb, rp_table; prn=true)
     for row in eachrow(by_hour)
         market = row.MARKET
         time = df.TIME[INDEX]
-        if row.RISE_1h >= MAX_RISE 
-            if INDEX < DAYS*24*60 # || isnothing(RATING_TAB) # rating calculation is only reliable after 4 days
+        if ! STOP && row.RISE_1h >= MAX_RISE 
+            if INDEX < DAYS*24*60 
                 buy(view, tdb, rp_table, time, market, MAX_TRADE; reason="RISE_1h >= MAX_RISE")
             else
                 rating = market_rating(RATING_TAB, market)
-                if rating > MIN_RATING
+                if rating > MIN_RATING # || row.RISE_1h >= MAX_RISE 
                     cash=calc_cash(view,tdb)
                     if cash >= KEEP
                         buy(view, tdb, rp_table, time, market, MAX_TRADE; reason="rating > MIN_RATING")
@@ -156,7 +170,7 @@ function check(df, tdb, rp_table; prn=true)
                         end
                         flag = true          
                     end
-                    if flag && buy(view, tdb, rp_table, time, market, amount_to_use; force=true, reason="every 12h: time < 4d or rating_ >= rating(RATING_TAB, market)")
+                    if ! STOP && flag && buy(view, tdb, rp_table, time, market, amount_to_use; force=true, reason="every 12h: time < 4d or rating_ >= rating(RATING_TAB, market)")
                         if prn println("Buying: ", market, " time: ", (time-T0)/3600) end
                         cash = calc_cash(view, tdb)
                         if cash < 0.5 * MAX_TRADE break end
@@ -177,6 +191,7 @@ end
 
 function trade(df; n=0, prn=true)
     global RATING_TAB
+    global STOP = false
     RATING_TAB = nothing
     top_ratings = nothing
     if n == 0
@@ -184,21 +199,36 @@ function trade(df; n=0, prn=true)
     end
     tdb = trade_db(df, START_KAPITAL)
 
-    time = df.TIME[INDEX] + 10 
+    time = df.TIME[INDEX]
     rp_table = rel_price_table(df, time)
     view = df[1:INDEX, :]
     for market in PREFER
         buy(view, tdb, rp_table, time, market, MAX_TRADE; reason="market in PREFER")
     end
+    vec=Float64[]
+    j = 0
     for i in WAIT:n
-        top_ratings = check(df, tdb, rp_table; prn=prn)
-        if ! isnothing(top_ratings)
-            println(mean(top_ratings.RATING))
+        time = df.TIME[INDEX]
+        check(df, tdb, rp_table; prn=prn)
+        if ! STOP && i > 60*24*4 && last(tdb.TOTAL)/maximum(tdb.TOTAL[end-12:end]) < STOP_LIMIT
+            STOP=true
+            println("STOP at ", (time-T0)/3600)
+            #     update_total(view, tdb, time)
+            markets = list_markets(tdb)
+            view = df[1:INDEX, :]
+            println(overview(view))
+            println(markets)
+            sell_all(view, tdb, markets)
+            #     break
+        end
+        if STOP
+            if j > 60*24*2
+                STOP=false
+                 println("START at ", (time-T0)/3600)
+            end
+            j += 1
         end
     end
-    # if ! isnothing(top_ratings)
-    #     println(top_ratings)
-    # end
     tdb
 end
 

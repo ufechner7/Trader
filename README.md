@@ -34,8 +34,7 @@ https://sdobber.github.io/FA_LSTNet/
         
 
 ### TODO
-1. sell all when overall performance drops 5% within 24h 
-2. plot sum of the ratings of the top 6 currencies
+1. add plot of course and rating of one market
 3. add rel_price to the bookings table; relative to t=0 when buying first, relative to buying when selling, relative to selling when buying second 
    perhaps we should not buy when rel_price is smaller than -5% and only sell when rel_price is smaller than -5%
 4. add NLOpt to optimizer parameters like min_rating

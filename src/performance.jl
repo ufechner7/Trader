@@ -98,3 +98,6 @@ function find_performance(view, tdb, time, rating_table=nothing)
     end
     return perf
 end
+
+function find_performance2(view, tdb, time, rating_table=nothing)
+end

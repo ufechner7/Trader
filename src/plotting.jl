@@ -43,8 +43,8 @@ function plot_24h(df, name)
 end
 
 function plot_total(df)
-    figure()
     tdb=get_tdb()
+    figure()
     xlabel("time [h]" * "               last_updated: " * last_updated(df))
     ylabel("EUR")
     plot((tdb.TIME.-T0)./3600, tdb.TOTAL, label="total")
@@ -56,13 +56,13 @@ function plot_total(df)
 end
 
 function plot_interest(df)
-    figure()
     tdb = get_tdb()
     markets = list_markets(tdb)
     sell_all(df, tdb, markets)
     interest = ((tdb.TOTAL)./first(tdb.TOTAL).-1.0).*100.0
     duration = (tdb.TIME) .- first(tdb.TIME)
     monthly = monthly_interest.(interest, duration)
+    figure()
     ax = plt.gca()
     ax.set_ylim([0, 600])
     ax.set_xlim([80, (last(tdb.TIME)-T0)/3600])
@@ -74,22 +74,23 @@ function plot_interest(df)
 end
 
 function plot_rating(df)
-    figure()
     tdb = get_tdb()
     y = TDB[TDB.MARKET .== "", :MEAN_RATING]
     x = TDB[TDB.MARKET .== "", :TIME]
+    figure()
     plot((x[96:end].-T0)./3600, y[96:end])
     title("Hourly mean performance of top markets")
     grid("on")
     nothing
 end
 
-function plot_markets(df, tdb=nothing, markets=nothing)
+function plot_markets(df; tdb=nothing, markets=nothing)
     tdb = get_tdb()
     if isnothing(markets)
         markets = list_markets(tdb, true)
     end
     x=(df.TIME .- T0)./360
+    figure()
     xlabel("time [h]")
     ylabel("performance [%]")
     # stackplot(x,y1, y2, y3, labels=['A','B','C'])
