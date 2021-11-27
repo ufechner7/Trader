@@ -5,7 +5,7 @@ TDB   = nothing
 RATING_TAB    = nothing
 STOP          = false      
 
-function buy(st, view, rp_table, time, market, amount; force=false, reason="")
+function buy(st, view, rp_table, market, amount; force=false, reason="")
     global FEE
     subset = filter(row -> row.MARKET == market, st.tdb)
     old_amount = sum(subset.BUY_EUR) - sum(subset.SELL_EUR)
@@ -14,7 +14,7 @@ function buy(st, view, rp_table, time, market, amount; force=false, reason="")
         rate = last(view[!, market])
         coins = amount / rate * FEE
         total = calc_total(view, st.tdb) + coins * rate - amount
-        v = [time, (time-st.t0)/3600, market, 0.0, amount, 0.0, coins, 0.0, 0.0, cash-amount, total, 0.0, reason]
+        v = [st.time, st.rel_time/3600, market, 0.0, amount, 0.0, coins, 0.0, 0.0, cash-amount, total, 0.0, reason]
         rel_price_table(view, time, rp_table; ref_market=market)
         push!(st.tdb, v)
         return true
@@ -23,7 +23,7 @@ function buy(st, view, rp_table, time, market, amount; force=false, reason="")
 end
 
 # sell all coins of a given market
-function sell(st, view, time, market; reason="")
+function sell(st, view, market; reason="")
     subset = filter(row -> row.MARKET == market, st.tdb)
     old_amount = sum(subset.BUY_COINS) - sum(subset.SELL_COINS)
     cash = calc_cash(view, st.tdb)
@@ -32,7 +32,7 @@ function sell(st, view, time, market; reason="")
         # println("Sell: ", market, " rate: ", rate)
         sell_eur = old_amount * rate
         total = calc_total(view, st.tdb)
-        v = [time, (time-st.t0)/3600, market, sell_eur, 0.0, old_amount, 0.0, 0.0, 0.0, cash+sell_eur, total, 0.0, reason]
+        v = [st.time, st.rel_time/3600, market, sell_eur, 0.0, old_amount, 0.0, 0.0, 0.0, cash+sell_eur, total, 0.0, reason]
         push!(st.tdb, v)
     end
 end
@@ -40,7 +40,7 @@ end
 function sell_all(st, view, markets)
     global STOP = true
     for market in markets
-        sell(st, view, st.time, market)
+        sell(st, view, market)
     end
 end
 
@@ -68,7 +68,7 @@ function check(st, rp_table; prn=true)
                     market = row.MARKET
                     if row.RATING < MAX_RATING 
                         if prn println("==> Sell: ", market) end
-                        sell(st, view, st.time, market; reason="row.RATING < MAX_RATING")
+                        sell(st, view, market; reason="row.RATING < MAX_RATING")
                     end
                 end
             end
@@ -80,19 +80,19 @@ function check(st, rp_table; prn=true)
         market = row.MARKET
         if ! STOP && row.RISE_1h >= MAX_RISE 
             if st.index < DAYS*24*60 
-                buy(st, view, rp_table, st.time, market, MAX_TRADE; reason="RISE_1h >= MAX_RISE")
+                buy(st, view, rp_table, market, MAX_TRADE; reason="RISE_1h >= MAX_RISE")
             else
                 rating = market_rating(RATING_TAB, market)
                 if rating > MIN_RATING # || row.RISE_1h >= MAX_RISE 
                     cash=calc_cash(view,st.tdb)
                     if cash >= KEEP
-                        buy(st, view, rp_table, st.time, market, MAX_TRADE; reason="rating > MIN_RATING")
+                        buy(st, view, rp_table, market, MAX_TRADE; reason="rating > MIN_RATING")
                         cash=calc_cash(view,st.tdb)
                         if cash >= KEEP
                             if cash >= 0.5*MAX_TRADE && cash < MAX_TRADE
-                                buy(st, view, rp_table, st.time, market, cash; reason="rating > MIN_RATING")
+                                buy(st, view, rp_table, market, cash; reason="rating > MIN_RATING")
                             else
-                                buy(st, view, rp_table, st.time, market, MAX_TRADE; reason="rating > MIN_RATING")
+                                buy(st, view, rp_table, market, MAX_TRADE; reason="rating > MIN_RATING")
                             end
                         end
                     end
@@ -100,7 +100,7 @@ function check(st, rp_table; prn=true)
             end            
         end
         if row.DROP_1h < MIN_DROP || row.DROP_24h < MIN_DROP_24
-            sell(st, view, st.time, market; reason="row.DROP_1h < MIN_DROP || row.DROP_24h < MIN_DROP_24")
+            sell(st, view, market; reason="row.DROP_1h < MIN_DROP || row.DROP_24h < MIN_DROP_24")
         end
     end
 
@@ -119,7 +119,7 @@ function check(st, rp_table; prn=true)
             # if ! (market in best_markets)
             if last(perf.PERF) < 1.0 
                 if prn println("Selling: ", market) end
-                sell(st, view, st.time, market; reason="last(perf.PERF) < 1.0 "*string(round(last(perf.PERF),digits=3)))
+                sell(st, view, market; reason="last(perf.PERF) < 1.0 "*string(round(last(perf.PERF),digits=3)))
                 
                 if st.index < DAYS*24*60 # rating calculation is only reliable after DAYS days
                     # markets = (perf.MARKET)
@@ -147,8 +147,8 @@ function check(st, rp_table; prn=true)
                         end
                         flag = true          
                     end
-                    if ! STOP && flag && buy(st, view, rp_table, st.time, market, amount_to_use; force=true, reason="every 12h: time < 4d or rating_ >= rating(RATING_TAB, market)")
-                        if prn println("Buying: ", market, " time: ", (st.time-st.t0)/3600) end
+                    if ! STOP && flag && buy(st, view, rp_table, market, amount_to_use; force=true, reason="every 12h: time < 4d or rating_ >= rating(RATING_TAB, market)")
+                        if prn println("Buying: ", market, " time: ", (st.rel_time)/3600) end
                         cash = calc_cash(view, st.tdb)
                         if cash < 0.5 * MAX_TRADE break end
                         amount_to_use = cash
@@ -178,7 +178,7 @@ function trade(st; n=0, prn=true)
     rp_table = rel_price_table(st.df, st.time)
     view = st.df[1:st.index, :]
     for market in PREFER
-        buy(st, view, rp_table, st.time, market, MAX_TRADE; reason="market in PREFER")
+        buy(st, view, rp_table, market, MAX_TRADE; reason="market in PREFER")
     end
     vec=Float64[]
     j = 0
@@ -186,7 +186,7 @@ function trade(st; n=0, prn=true)
         check(st, rp_table; prn=prn)
         if ! STOP && i > 60*24*4 && last(st.tdb.TOTAL)/maximum(st.tdb.TOTAL[end-12:end]) < STOP_LIMIT
             STOP=true
-            println("STOP at ", (st.time-st.t0)/3600)
+            println("STOP at ", (st.rel_time)/3600)
             markets = list_markets(st.tdb)
             view = st.df[1:st.index, :]
             println(overview(view))
@@ -197,7 +197,7 @@ function trade(st; n=0, prn=true)
         if STOP
             if j > 60*24*1.5
                 STOP=false
-                 println("START at ", (st.time-st.t0)/3600)
+                 println("START at ", (st.rel_time)/3600)
             end
             j += 1
         end

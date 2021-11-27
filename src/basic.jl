@@ -28,6 +28,11 @@ function Base.getproperty(st::State, sym::Symbol)
         df = getfield(st, :df)
         index = getfield(st, :index)
         df.TIME[index]
+    elseif sym == :rel_time
+        df = getfield(st, :df)
+        t0 = getfield(st, :t0)
+        index = getfield(st, :index)
+        df.TIME[index]-t0    
     else
         getfield(st, sym)
     end
