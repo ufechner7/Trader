@@ -1,31 +1,31 @@
-function test1(df)
+function test1(st)
     markets = ["MLN_EUR"]
-    tdb=trade(df, 30)
-    view = df[1:INDEX, :]
-    sell_all(view, tdb, markets)
-    tdb
+    st.tdb=trade(st, n=30)
+    view = st.df[1:st.index, :]
+    sell_all(st, markets)
+    st.tdb
 end
 
-function test2(df)
+function test2(st)
     markets = ["MLN_EUR", "ALICE_EUR"]
-    tdb=trade(df, 60)
-    view = df[1:INDEX, :]
-    sell_all(view, tdb, markets)
-    tdb
+    st.tdb=trade(st, n=60)
+    view = st.df[1:st.index, :]
+    sell_all(st, markets)
+    st.tdb
 end
 
 function test3(st; plot=false, prn=false)
     tdb=get_tdb(st)
     markets = list_markets(tdb)
-    sell_all(st.df, tdb, markets)
+     sell_all(st, markets)
 
     if plot
         push!(markets, "BTC_EUR")
-        return plot_markets(st.df, tdb, markets)
+        return plot_markets(st)
     else
         tdb2 = filter(row -> row.MARKET != "", tdb)
         interest = (last(tdb.TOTAL)/first(tdb.TOTAL)-1.0)*100.0
-        duration = last(df.TIME) - first(df.TIME)
+        duration = last(st.df.TIME) - first(st.df.TIME)
         yearly = yearly_interest(interest, duration)
         monthly = monthly_interest(interest, duration)
         # println("The interest rate per year is:  ", round(yearly), " %")
@@ -34,38 +34,32 @@ function test3(st; plot=false, prn=false)
     end
 end
 
-function test3b(df, plot=false)
-    global WAIT, TDB
-    WAIT = 4*60
-    if isnothing(TDB)
-        tdb = trade(df, 0)
-        TDB=tdb
-    else
-        tdb=TDB
-    end
+function test3b(st; plot=false)
+    st.wait = 4*60
+    tdb = get_tdb(st)
     markets = list_markets(tdb)
-    sell_all(df, tdb, markets)
+    sell_all(st, markets)
 
     if plot
         push!(markets, "BTC_EUR")
-        return plot_markets(df, tdb, markets)
+        return plot_markets(st)
     else
         tdb2 = filter(row -> row.MARKET != "", tdb)
         interest = (last(tdb.TOTAL)/first(tdb.TOTAL)-1.0)*100.0
-        duration = last(df.TIME) - first(df.TIME)
+        duration = last(st.df.TIME) - first(st.df.TIME)
         yearly = yearly_interest(interest, duration)
         monthly = monthly_interest(interest, duration)
         # println("The interest rate per year is:  ", round(yearly), " %")
         println("The interest rate per month is: ", round(monthly), " %")
         return tdb2
     end
-    WAIT=60
+    st.wait = 60
 end
 
 function test4(df)
-    tdb=trade(df)
+    tdb=trade(st)
     markets = list_markets(tdb)
-    plot_markets(df, tdb, markets)
+    plot_markets(st.df)
 end
 
 function test5(df)
@@ -73,7 +67,7 @@ function test5(df)
     totals = Float64[]
     for i in 1:46
         WAIT = i*60
-        tdb=trade(df, 0, false)
+        tdb=trade(st, prn=false)
         push!(totals, last(tdb.TOTAL))
         println(last(tdb.TOTAL))
     end

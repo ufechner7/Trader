@@ -7,6 +7,7 @@ const NoDataFrame = Union{Nothing, DataFrame}
 @with_kw mutable struct State @deftype Int64
    t0                =  0                  # start time [s]
    index             =  1                  # last index of the input data frame
+   wait              =  60                 # number of seconds to wait before trading
    mode::Mode        = INIT
    df::NoDataFrame              = nothing  # input data frame
    tdb::NoDataFrame             = nothing  # trading data frame
@@ -18,6 +19,7 @@ end
 function State(df)
     st=State()
     st.df = df
+    st.t0 = first(df.TIME)
     st
 end
 

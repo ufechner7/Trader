@@ -21,7 +21,7 @@ end
 
 function get_tdb(st)
     if isnothing(st.tdb)
-        tdb = trade(st.df; prn=false)
+        tdb = trade(st; prn=false)
         st.tdb=tdb
     else
         tdb=st.tdb
@@ -59,7 +59,7 @@ end
 function plot_interest(st)
     tdb = get_tdb(st)
     markets = list_markets(tdb)
-    sell_all(st.df, tdb, markets)
+    sell_all(st, markets)
     interest = ((tdb.TOTAL)./first(tdb.TOTAL).-1.0).*100.0
     duration = (tdb.TIME) .- first(tdb.TIME)
     monthly = monthly_interest.(interest, duration)
