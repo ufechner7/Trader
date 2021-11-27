@@ -39,9 +39,8 @@ end
 
 function sell_all(st, view, markets)
     global STOP = true
-    time = st.df.TIME[st.index]
     for market in markets
-        sell(st, view, time, market)
+        sell(st, view, st.time, market)
     end
 end
 
@@ -55,22 +54,21 @@ function check(st, rp_table; prn=true)
     top_ratings=nothing
 
     # update rp_table
-    time = st.df.TIME[st.index]
-    rel_price_table(st.df, time, rp_table)
+    rel_price_table(st.df, st.time, rp_table)
 
     # every hour
     if mod(st.index, 60) == 0 
         # println("==> hour")
         RATING_TAB=rating_table(view, 10000; filter=false)
-        update_total(st, view, time)
+        update_total(st, view, st.time)
         if st.index > DAYS*24*60
-            perf = find_performance(view, st.tdb, time, RATING_TAB)
+            perf = find_performance(view, st.tdb, st.time, RATING_TAB)
             if ! isnothing(perf)
                 for row in eachrow(perf)
                     market = row.MARKET
                     if row.RATING < MAX_RATING 
                         if prn println("==> Sell: ", market) end
-                        sell(st, view, time, market; reason="row.RATING < MAX_RATING")
+                        sell(st, view, st.time, market; reason="row.RATING < MAX_RATING")
                     end
                 end
             end
@@ -82,19 +80,19 @@ function check(st, rp_table; prn=true)
         market = row.MARKET
         if ! STOP && row.RISE_1h >= MAX_RISE 
             if st.index < DAYS*24*60 
-                buy(st, view, rp_table, time, market, MAX_TRADE; reason="RISE_1h >= MAX_RISE")
+                buy(st, view, rp_table, st.time, market, MAX_TRADE; reason="RISE_1h >= MAX_RISE")
             else
                 rating = market_rating(RATING_TAB, market)
                 if rating > MIN_RATING # || row.RISE_1h >= MAX_RISE 
                     cash=calc_cash(view,st.tdb)
                     if cash >= KEEP
-                        buy(st, view, rp_table, time, market, MAX_TRADE; reason="rating > MIN_RATING")
+                        buy(st, view, rp_table, st.time, market, MAX_TRADE; reason="rating > MIN_RATING")
                         cash=calc_cash(view,st.tdb)
                         if cash >= KEEP
                             if cash >= 0.5*MAX_TRADE && cash < MAX_TRADE
-                                buy(st, view, rp_table, time, market, cash; reason="rating > MIN_RATING")
+                                buy(st, view, rp_table, st.time, market, cash; reason="rating > MIN_RATING")
                             else
-                                buy(st, view, rp_table, time, market, MAX_TRADE; reason="rating > MIN_RATING")
+                                buy(st, view, rp_table, st.time, market, MAX_TRADE; reason="rating > MIN_RATING")
                             end
                         end
                     end
@@ -102,13 +100,13 @@ function check(st, rp_table; prn=true)
             end            
         end
         if row.DROP_1h < MIN_DROP || row.DROP_24h < MIN_DROP_24
-            sell(st, view, time, market; reason="row.DROP_1h < MIN_DROP || row.DROP_24h < MIN_DROP_24")
+            sell(st, view, st.time, market; reason="row.DROP_1h < MIN_DROP || row.DROP_24h < MIN_DROP_24")
         end
     end
 
     # every INTERVAL hours: evaluate performance, sell and buy
     if mod(st.index, 60*INTERVAL) == 0 
-        perf = find_performance(view, st.tdb, time, RATING_TAB)
+        perf = find_performance(view, st.tdb, st.time, RATING_TAB)
         top_ratings = rating_table(view, 8, filter=false)
         # println(top_ratings.RATING)
         
@@ -121,7 +119,7 @@ function check(st, rp_table; prn=true)
             # if ! (market in best_markets)
             if last(perf.PERF) < 1.0 
                 if prn println("Selling: ", market) end
-                sell(st, view, time, market; reason="last(perf.PERF) < 1.0 "*string(round(last(perf.PERF),digits=3)))
+                sell(st, view, st.time, market; reason="last(perf.PERF) < 1.0 "*string(round(last(perf.PERF),digits=3)))
                 
                 if st.index < DAYS*24*60 # rating calculation is only reliable after DAYS days
                     # markets = (perf.MARKET)
@@ -149,8 +147,8 @@ function check(st, rp_table; prn=true)
                         end
                         flag = true          
                     end
-                    if ! STOP && flag && buy(st, view, rp_table, time, market, amount_to_use; force=true, reason="every 12h: time < 4d or rating_ >= rating(RATING_TAB, market)")
-                        if prn println("Buying: ", market, " time: ", (time-st.t0)/3600) end
+                    if ! STOP && flag && buy(st, view, rp_table, st.time, market, amount_to_use; force=true, reason="every 12h: time < 4d or rating_ >= rating(RATING_TAB, market)")
+                        if prn println("Buying: ", market, " time: ", (st.time-st.t0)/3600) end
                         cash = calc_cash(view, st.tdb)
                         if cash < 0.5 * MAX_TRADE break end
                         amount_to_use = cash
@@ -177,20 +175,18 @@ function trade(st; n=0, prn=true)
     end
     st.tdb = trade_db(st, START_KAPITAL)
 
-    time = st.df.TIME[st.index]
-    rp_table = rel_price_table(st.df, time)
+    rp_table = rel_price_table(st.df, st.time)
     view = st.df[1:st.index, :]
     for market in PREFER
-        buy(st, view, rp_table, time, market, MAX_TRADE; reason="market in PREFER")
+        buy(st, view, rp_table, st.time, market, MAX_TRADE; reason="market in PREFER")
     end
     vec=Float64[]
     j = 0
     for i in st.wait:n
-        time = st.df.TIME[st.index]
         check(st, rp_table; prn=prn)
         if ! STOP && i > 60*24*4 && last(st.tdb.TOTAL)/maximum(st.tdb.TOTAL[end-12:end]) < STOP_LIMIT
             STOP=true
-            println("STOP at ", (time-st.t0)/3600)
+            println("STOP at ", (st.time-st.t0)/3600)
             markets = list_markets(st.tdb)
             view = st.df[1:st.index, :]
             println(overview(view))
@@ -201,7 +197,7 @@ function trade(st; n=0, prn=true)
         if STOP
             if j > 60*24*1.5
                 STOP=false
-                 println("START at ", (time-st.t0)/3600)
+                 println("START at ", (st.time-st.t0)/3600)
             end
             j += 1
         end

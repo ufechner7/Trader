@@ -23,6 +23,16 @@ function State(df)
     st
 end
 
+function Base.getproperty(st::State, sym::Symbol)
+    if sym == :time
+        df = getfield(st, :df)
+        index = getfield(st, :index)
+        df.TIME[index]
+    else
+        getfield(st, sym)
+    end
+end
+
 function rise_1h(df, name)
     col     = df[!, name]
     window = col[max((length(col)-60+1), 1):end]
