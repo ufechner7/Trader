@@ -10,8 +10,8 @@ const NoDataFrame = Union{Nothing, DataFrame}
    wait              =  60                 # number of seconds to wait before trading
    mode::Mode        = INIT
    df::NoDataFrame              = nothing  # input data frame
-   tdb::NoDataFrame             = nothing  # trading data frame
-   rdb::NoDataFrame             = nothing  # rating data frame
+   tdb::NoDataFrame             = nothing  # trading data base
+   rdb::NoDataFrame             = nothing  # rating data base
    rel_price_table::NoDataFrame = nothing  # prices relative to buying time
    markets::Vector{String}      = []       # currently owned coins
 end

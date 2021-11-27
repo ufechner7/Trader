@@ -1,9 +1,5 @@
 using CSV, DataFrames, PyPlot, Dates, TimeZones, Impute, Statistics, GLM, Parameters
 
-# global variables
-TDB   = nothing
-RATING_TAB    = nothing
-
 function buy(st, view, rp_table, market, amount; force=false, reason="")
     global FEE
     subset = filter(row -> row.MARKET == market, st.tdb)
@@ -45,7 +41,6 @@ end
 
 function check(st, rp_table; prn=true)
     global MAX_TRADE, MIN_DROP, MIN_DROP_24
-    global RATING_TAB
     local top_ratings
     # create view to db with the first st.index rows
     view = st.df[1:st.index, :]
@@ -58,10 +53,10 @@ function check(st, rp_table; prn=true)
     # every hour
     if mod(st.index, 60) == 0 
         # println("==> hour")
-        RATING_TAB=rating_table(view, 10000; filter=false)
+        st.rdb=rating_table(view, 10000; filter=false)
         update_total(st, view, st.time)
         if st.index > DAYS*24*60
-            perf = find_performance(view, st.tdb, st.time, RATING_TAB)
+            perf = find_performance(view, st.tdb, st.time, st.rdb)
             if ! isnothing(perf)
                 for row in eachrow(perf)
                     market = row.MARKET
@@ -81,7 +76,7 @@ function check(st, rp_table; prn=true)
             if st.index < DAYS*24*60 
                 buy(st, view, rp_table, market, MAX_TRADE; reason="RISE_1h >= MAX_RISE")
             else
-                rating = market_rating(RATING_TAB, market)
+                rating = market_rating(st.rdb, market)
                 if rating > MIN_RATING # || row.RISE_1h >= MAX_RISE 
                     cash=calc_cash(view,st.tdb)
                     if cash >= KEEP
@@ -105,7 +100,7 @@ function check(st, rp_table; prn=true)
 
     # every INTERVAL hours: evaluate performance, sell and buy
     if mod(st.index, 60*INTERVAL) == 0 
-        perf = find_performance(view, st.tdb, st.time, RATING_TAB)
+        perf = find_performance(view, st.tdb, st.time, st.rdb)
         top_ratings = rating_table(view, 8, filter=false)
         # println(top_ratings.RATING)
         
@@ -137,7 +132,7 @@ function check(st, rp_table; prn=true)
                 for market in markets   
                     flag = false
                     if st.index >= DAYS*24*60
-                        rating = market_rating(RATING_TAB, market)
+                        rating = market_rating(st.rdb, market)
                         flag = rating > MIN_RATING 
                     else 
                         performance = rel_price(rp_table, market)
@@ -146,7 +141,7 @@ function check(st, rp_table; prn=true)
                         end
                         flag = true          
                     end
-                    if ! st.stopped && flag && buy(st, view, rp_table, market, amount_to_use; force=true, reason="every 12h: time < 4d or rating_ >= rating(RATING_TAB, market)")
+                    if ! st.stopped && flag && buy(st, view, rp_table, market, amount_to_use; force=true, reason="every 12h: time < 4d or rating_ >= rating(st.rdb, market)")
                         if prn println("Buying: ", market, " time: ", (st.rel_time)/3600) end
                         cash = calc_cash(view, st.tdb)
                         if cash < 0.5 * MAX_TRADE break end
@@ -165,9 +160,8 @@ function check(st, rp_table; prn=true)
 end
 
 function trade(st; n=0, prn=true)
-    global RATING_TAB
     st.mode=INIT
-    RATING_TAB = nothing
+    st.rdb = nothing
     top_ratings = nothing
     if n == 0
         n = size(st.df)[1]
