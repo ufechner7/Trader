@@ -48,8 +48,8 @@ function plot_total(st)
     figure()
     xlabel("time [h]" * "               last_updated: " * last_updated(st.df))
     ylabel("EUR")
-    plot((tdb.TIME.-T0)./3600, tdb.TOTAL, label="total")
-    plot((tdb.TIME.-T0)./3600, tdb.CASH, label="cash")
+    plot((tdb.TIME .- st.t0)./3600, tdb.TOTAL, label="total")
+    plot((tdb.TIME .- st.t0)./3600, tdb.CASH, label="cash")
     title("Value of total assets")
     grid("on")
     legend(loc="lower right")
@@ -66,9 +66,9 @@ function plot_interest(st)
     figure()
     ax = plt.gca()
     ax.set_ylim([0, 600])
-    ax.set_xlim([80, (last(tdb.TIME)-T0)/3600])
+    ax.set_xlim([80, (last(tdb.TIME)-st.t0)/3600])
     xlabel("time [h]" * "               last_updated: " * last_updated(st.df))
-    plot((tdb.TIME.-T0)./3600, monthly)
+    plot((tdb.TIME .- st.t0)./3600, monthly)
     title("Monthly interest [%]\n")
     grid("on")
     nothing
@@ -79,7 +79,7 @@ function plot_rating(st)
     y = tdb[tdb.MARKET .== "", :MEAN_RATING]
     x = tdb[tdb.MARKET .== "", :TIME]
     figure()
-    plot((x[96:end].-T0)./3600, y[96:end])
+    plot((x[96:end] .- st.t0)./3600, y[96:end])
     title("Hourly mean performance of top markets")
     grid("on")
     nothing
@@ -90,7 +90,7 @@ function plot_markets(st)
     if length(st.markets) == 0
         st.markets = list_markets(tdb, true)
     end
-    x = (st.df.TIME .- T0)./360
+    x = (st.df.TIME .- st.t0)./360
     figure()
     xlabel("time [h]")
     ylabel("performance [%]")

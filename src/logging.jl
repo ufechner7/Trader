@@ -17,11 +17,10 @@ function logfiles()
 end
 
 function read_log(logfiles)
-    global T0
     df = nothing
     t_end = 0
     for logfile in logfiles
-        df_new = CSV.read("data/" * logfile, DataFrame)
+        df_new = CSV.read("data/" * logfile, DataFrame; ntasks=1)
         if isnothing(df)
             df=df_new
             t_end = last(df.TIME)
@@ -41,6 +40,7 @@ function read_log(logfiles)
             t_end = last(df.TIME)
         end
     end
+
     df = Impute.interp(df)
     disallowmissing!(df)
 

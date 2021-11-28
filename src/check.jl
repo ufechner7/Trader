@@ -5,7 +5,7 @@ function on_minute(st, view, by_hour, prn)
    for row in eachrow(by_hour)
         market = row.MARKET
         if ! st.stopped && row.RISE_1h >= MAX_RISE 
-            if st.index < DAYS*24*60 
+            if st.mode == INIT  
                 buy(st, view, st.rp_table, market, MAX_TRADE; reason="RISE_1h >= MAX_RISE")
             else
                 rating = market_rating(st.rdb, market)
@@ -32,10 +32,10 @@ function on_minute(st, view, by_hour, prn)
 end
 
 function on_hour(st, view, prn)
-    # println("==> on_hour")
     st.rdb = rating_table(view, 10000; filter=false)
     update_total(st, view, st.time)
-    if st.index > DAYS*24*60
+
+    if st.mode in (MIXED, RATING, STOPPED)
         perf = find_performance(view, st.tdb, st.time, st.rdb)
         if ! isnothing(perf)
             for row in eachrow(perf)
@@ -66,7 +66,7 @@ function on_some_hours(st, view, prn)
             if prn println("Selling: ", market) end
             sell(st, view, market; reason="last(perf.PERF) < 1.0 "*string(round(last(perf.PERF),digits=3)))
             
-            if st.index < DAYS*24*60 # rating calculation is only reliable after DAYS days
+            if st.mode == INIT
                 # markets = (perf.MARKET)
                 markets = (first(sort(st.rp_table, [:REL_PRIZE], rev=true),6)).MARKET
             else
@@ -78,11 +78,10 @@ function on_some_hours(st, view, prn)
             if cash >= MAX_TRADE
                 amount_to_use = MAX_TRADE
             end
-            # println("==> ", markets)
             i = 1
             for market in markets   
                 flag = false
-                if st.index >= DAYS*24*60
+                if st.mode in (MIXED, RATING, STOPPED)
                     rating = market_rating(st.rdb, market)
                     flag = rating > MIN_RATING 
                 else 
@@ -105,14 +104,20 @@ function on_some_hours(st, view, prn)
             end
         end
     end
+    return top_ratings
 end
 
 function check(st; prn=true)
+    top_ratings = nothing
 
     # create view to db with the first st.index rows
     view = st.df[1:st.index, :]
     by_hour, by_day = overview(view)
-    top_ratings=nothing
+
+    # switch state if required
+    if st.mode == INIT && st.index > DAYS*24*60
+        st.mode = RATING
+    end
 
     # update rp_table
     rel_price_table(st.df, st.time, st.rp_table)
@@ -127,7 +132,7 @@ function check(st; prn=true)
 
     # every INTERVAL hours: evaluate performance, sell and buy
     if mod(st.index, 60*INTERVAL) == 0 
-        on_some_hours(st, view, prn)
+        top_ratings = on_some_hours(st, view, prn)
     end
     top_ratings
 end
