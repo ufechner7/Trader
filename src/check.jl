@@ -5,7 +5,7 @@ function on_minute(st, view, by_hour, prn)
    for row in eachrow(by_hour)
         market = row.MARKET
         if ! st.stopped && row.RISE_1h >= MAX_RISE 
-            if st.index < DAYS*24*60 
+            if st.mode == INIT  
                 buy(st, view, st.rp_table, market, MAX_TRADE; reason="RISE_1h >= MAX_RISE")
             else
                 rating = market_rating(st.rdb, market)
@@ -32,10 +32,12 @@ function on_minute(st, view, by_hour, prn)
 end
 
 function on_hour(st, view, prn)
-    # println("==> on_hour")
+    println("==> on_hour")
     st.rdb = rating_table(view, 10000; filter=false)
     update_total(st, view, st.time)
+    println(st.index > DAYS*24*60, st.mode in (MIXED, RATING, STOPPED))
     if st.index > DAYS*24*60
+    # if st.mode in (MIXED, RATING)
         perf = find_performance(view, st.tdb, st.time, st.rdb)
         if ! isnothing(perf)
             for row in eachrow(perf)
