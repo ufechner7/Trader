@@ -49,6 +49,16 @@ function on_hour(st, view, prn)
     end
 end
 
+# helper function
+function amount_to_use(st, view)
+    cash = calc_cash(view, st.tdb)
+    amount = cash
+    if cash >= MAX_TRADE
+        amount = MAX_TRADE
+    end
+    amount
+end
+
 # every INTERVAL hours: evaluate performance during mode INIT, sell and buy
 function on_some_hours_init(st, view, prn)
     perf = find_performance(view, st.tdb, st.time, st.rdb)
@@ -64,20 +74,10 @@ function on_some_hours_init(st, view, prn)
             if prn println("Selling: ", market) end
             sell(st, view, market; reason="last(perf.PERF) < 1.0 "*string(round(last(perf.PERF),digits=3)))
             # BUY
-            cash = calc_cash(view, st.tdb)
-            amount_to_use = cash
-            if cash >= MAX_TRADE
-                amount_to_use = MAX_TRADE
-            end
-            for market in (first(sort(st.rp_table, [:REL_PRIZE], rev=true), 6)).MARKET            
-                if buy(st, view, st.rp_table, market, amount_to_use; force=true, reason="every 12h: mode==INIT)")
+             for market in (first(sort(st.rp_table, [:REL_PRIZE], rev=true), 2)).MARKET            
+                if buy(st, view, st.rp_table, market, amount_to_use(st, view); force=true, reason="every 12h: mode==INIT)")
                     if prn println("Buying: ", market, " time: ", (st.rel_time)/3600) end
-                    cash = calc_cash(view, st.tdb)
-                    if cash < 0.5 * MAX_TRADE break end
-                    amount_to_use = cash
-                    if cash >= MAX_TRADE
-                        amount_to_use = MAX_TRADE
-                    end                       
+                    if calc_cash(view, st.tdb) < 0.5 * MAX_TRADE break end              
                 end
             end
         end
