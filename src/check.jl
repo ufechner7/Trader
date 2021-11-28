@@ -1,0 +1,133 @@
+# the core rountine "check" that checks the courses and buys and sells
+# helper functions on_minute, on_hour, on_some_hours
+
+function on_minute(st, view, by_hour, prn)
+   for row in eachrow(by_hour)
+        market = row.MARKET
+        if ! st.stopped && row.RISE_1h >= MAX_RISE 
+            if st.index < DAYS*24*60 
+                buy(st, view, st.rp_table, market, MAX_TRADE; reason="RISE_1h >= MAX_RISE")
+            else
+                rating = market_rating(st.rdb, market)
+                if rating > MIN_RATING # || row.RISE_1h >= MAX_RISE 
+                    cash=calc_cash(view,st.tdb)
+                    if cash >= KEEP
+                        buy(st, view, st.rp_table, market, MAX_TRADE; reason="rating > MIN_RATING")
+                        cash=calc_cash(view,st.tdb)
+                        if cash >= KEEP
+                            if cash >= 0.5*MAX_TRADE && cash < MAX_TRADE
+                                buy(st, view, st.rp_table, market, cash; reason="rating > MIN_RATING")
+                            else
+                                buy(st, view, st.rp_table, market, MAX_TRADE; reason="rating > MIN_RATING")
+                            end
+                        end
+                    end
+                end
+            end            
+        end
+        if row.DROP_1h < MIN_DROP || row.DROP_24h < MIN_DROP_24
+            sell(st, view, market; reason="row.DROP_1h < MIN_DROP || row.DROP_24h < MIN_DROP_24")
+        end
+    end
+end
+
+function on_hour(st, view, prn)
+    # println("==> on_hour")
+    st.rdb = rating_table(view, 10000; filter=false)
+    update_total(st, view, st.time)
+    if st.index > DAYS*24*60
+        perf = find_performance(view, st.tdb, st.time, st.rdb)
+        if ! isnothing(perf)
+            for row in eachrow(perf)
+                market = row.MARKET
+                if row.RATING < MAX_RATING 
+                    if prn println("==> Sell: ", market) end
+                    sell(st, view, market; reason="row.RATING < MAX_RATING")
+                end
+            end
+        end
+    end
+end
+
+# every INTERVAL hours: evaluate performance, sell and buy
+function on_some_hours(st, view, prn)
+    perf = find_performance(view, st.tdb, st.time, st.rdb)
+    top_ratings = rating_table(view, 8, filter=false)
+    # println(top_ratings.RATING)
+    
+    if ! isnothing(perf)
+        sort!(perf, [:PERF], rev=true)
+        if prn println(perf) end
+        market = last(perf.MARKET)
+        
+        # best_markets = (first(sort(rp_table, [:REL_PRIZE], rev=true),6)).MARKET
+        # if ! (market in best_markets)
+        if last(perf.PERF) < 1.0 
+            if prn println("Selling: ", market) end
+            sell(st, view, market; reason="last(perf.PERF) < 1.0 "*string(round(last(perf.PERF),digits=3)))
+            
+            if st.index < DAYS*24*60 # rating calculation is only reliable after DAYS days
+                # markets = (perf.MARKET)
+                markets = (first(sort(st.rp_table, [:REL_PRIZE], rev=true),6)).MARKET
+            else
+                markets = (top_ratings.MARKET)
+                if prn println(top_ratings) end
+            end
+            cash = calc_cash(view, st.tdb)
+            amount_to_use = cash
+            if cash >= MAX_TRADE
+                amount_to_use = MAX_TRADE
+            end
+            # println("==> ", markets)
+            i = 1
+            for market in markets   
+                flag = false
+                if st.index >= DAYS*24*60
+                    rating = market_rating(st.rdb, market)
+                    flag = rating > MIN_RATING 
+                else 
+                    performance = rel_price(st.rp_table, market)
+                    if performance > 1.01
+                        flag = true
+                    end
+                    flag = true          
+                end
+                if ! st.stopped && flag && buy(st, view, st.rp_table, market, amount_to_use; force=true, reason="every 12h: time < 4d or rating_ >= rating(st.rdb, market)")
+                    if prn println("Buying: ", market, " time: ", (st.rel_time)/3600) end
+                    cash = calc_cash(view, st.tdb)
+                    if cash < 0.5 * MAX_TRADE break end
+                    amount_to_use = cash
+                    if cash >= MAX_TRADE
+                        amount_to_use = MAX_TRADE
+                    end                       
+                end
+                i += 1
+            end
+        end
+    end
+end
+
+function check(st; prn=true)
+
+    # create view to db with the first st.index rows
+    view = st.df[1:st.index, :]
+    by_hour, by_day = overview(view)
+    top_ratings=nothing
+
+    # update rp_table
+    rel_price_table(st.df, st.time, st.rp_table)
+
+    # every hour
+    if mod(st.index, 60) == 0 
+        on_hour(st, view, prn)
+    end
+
+    # every minute: buy and sell if required
+    on_minute(st, view, by_hour, prn)
+
+    # every INTERVAL hours: evaluate performance, sell and buy
+    if mod(st.index, 60*INTERVAL) == 0 
+        on_some_hours(st, view, prn)
+    end
+    top_ratings
+end

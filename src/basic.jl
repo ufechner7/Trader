@@ -12,7 +12,7 @@ const NoDataFrame = Union{Nothing, DataFrame}
    df::NoDataFrame              = nothing  # input data frame
    tdb::NoDataFrame             = nothing  # trading data base
    rdb::NoDataFrame             = nothing  # rating data base
-   rel_price_table::NoDataFrame = nothing  # prices relative to buying time
+   rp_table::NoDataFrame        = nothing  # prices relative to buying time
    markets::Vector{String}      = []       # currently owned coins
 end
 
@@ -36,6 +36,13 @@ function Base.getproperty(st::State, sym::Symbol)
     elseif sym == :stopped
         mode = getfield(st, :mode)
         mode == STOPPED
+    elseif sym == :sorted_rp_table
+        rp_table =  getfield(st, :rp_table)
+        if isnothing(rp_table)
+            return nothing
+        else
+            sort(rp_table, [:REL_PRIZE], rev=true)
+        end
     else
         getfield(st, sym)
     end
