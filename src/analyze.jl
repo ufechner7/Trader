@@ -43,7 +43,7 @@ end
 
 
 function trade(st; n=0, prn=true)
-    st.mode=INIT
+    st.mode = INIT
     st.rdb = nothing
     top_ratings = nothing
     if n == 0

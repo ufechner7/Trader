@@ -7,7 +7,7 @@ function subrating(df, n, interest_function)
     delta_t = view.TIME[end]-view.TIME[1] # timespan in seconds
     for market in markets
         y = view[!, market] 
-        x = view.TIME .- T0
+        x = view.TIME .- view.TIME[1]
         X = [ones(n) x]
         y_rel = y./y[1]*100.0
         x = X[:,2]
@@ -92,7 +92,7 @@ function find_performance(view, tdb, time, rating_table=nothing)
                     rating=-1.0
                 end
             end
-            rel_time=(time-T0)/3600.0
+            rel_time=(time-view.TIME[1])/3600.0
             if isnothing(perf)
                 perf = DataFrame(TIME=time, REL_TIME=rel_time, MARKET = market, PERF=performance, RATING=rating)
             else

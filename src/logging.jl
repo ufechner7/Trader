@@ -20,7 +20,7 @@ function read_log(logfiles)
     df = nothing
     t_end = 0
     for logfile in logfiles
-        df_new = CSV.read("data/" * logfile, DataFrame)
+        df_new = CSV.read("data/" * logfile, DataFrame; ntasks=1)
         if isnothing(df)
             df=df_new
             t_end = last(df.TIME)
