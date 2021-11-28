@@ -17,7 +17,6 @@ function logfiles()
 end
 
 function read_log(logfiles)
-    global T0
     df = nothing
     t_end = 0
     for logfile in logfiles
@@ -41,6 +40,7 @@ function read_log(logfiles)
             t_end = last(df.TIME)
         end
     end
+
     df = Impute.interp(df)
     disallowmissing!(df)
 
