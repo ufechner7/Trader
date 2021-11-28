@@ -49,6 +49,42 @@ function on_hour(st, view, prn)
     end
 end
 
+# every INTERVAL hours: evaluate performance during mode INIT, sell and buy
+function on_some_hours_init(st, view, prn)
+    perf = find_performance(view, st.tdb, st.time, st.rdb)
+    top_ratings = rating_table(view, 8, filter=false) # not used for decision making
+    
+    if ! isnothing(perf)
+        sort!(perf, [:PERF], rev=true)
+        if prn println(perf) end
+        market = last(perf.MARKET)
+        
+        if last(perf.PERF) < 1.0
+            # SELL 
+            if prn println("Selling: ", market) end
+            sell(st, view, market; reason="last(perf.PERF) < 1.0 "*string(round(last(perf.PERF),digits=3)))
+            # BUY
+            cash = calc_cash(view, st.tdb)
+            amount_to_use = cash
+            if cash >= MAX_TRADE
+                amount_to_use = MAX_TRADE
+            end
+            for market in (first(sort(st.rp_table, [:REL_PRIZE], rev=true), 6)).MARKET            
+                if buy(st, view, st.rp_table, market, amount_to_use; force=true, reason="every 12h: mode==INIT)")
+                    if prn println("Buying: ", market, " time: ", (st.rel_time)/3600) end
+                    cash = calc_cash(view, st.tdb)
+                    if cash < 0.5 * MAX_TRADE break end
+                    amount_to_use = cash
+                    if cash >= MAX_TRADE
+                        amount_to_use = MAX_TRADE
+                    end                       
+                end
+            end
+        end
+    end
+    return top_ratings
+end
+
 # every INTERVAL hours: evaluate performance, sell and buy
 function on_some_hours(st, view, prn)
     perf = find_performance(view, st.tdb, st.time, st.rdb)
@@ -132,7 +168,11 @@ function check(st; prn=true)
 
     # every INTERVAL hours: evaluate performance, sell and buy
     if mod(st.index, 60*INTERVAL) == 0 
-        top_ratings = on_some_hours(st, view, prn)
+        if st.mode == INIT
+            topratings = on_some_hours_init(st, view, prn)
+        else
+            topratings = on_some_hours(st, view, prn)
+        end
     end
     top_ratings
 end
