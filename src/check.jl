@@ -105,14 +105,20 @@ function on_some_hours(st, view, prn)
             end
         end
     end
+    return top_ratings
 end
 
 function check(st; prn=true)
+    top_ratings = nothing
 
     # create view to db with the first st.index rows
     view = st.df[1:st.index, :]
     by_hour, by_day = overview(view)
-    top_ratings=nothing
+
+    # switch state if required
+    if st.mode == INIT && st.index >= DAYS*24*60
+        st.mode = RATING
+    end
 
     # update rp_table
     rel_price_table(st.df, st.time, st.rp_table)
@@ -127,7 +133,7 @@ function check(st; prn=true)
 
     # every INTERVAL hours: evaluate performance, sell and buy
     if mod(st.index, 60*INTERVAL) == 0 
-        on_some_hours(st, view, prn)
+        top_ratings = on_some_hours(st, view, prn)
     end
     top_ratings
 end
