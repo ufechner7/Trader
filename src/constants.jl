@@ -15,6 +15,7 @@ EXTRA_RATING        = 0.0             # extra rating for fast rise was: 12.5
 TAU                 = 180               # time constant for decay of extra rating
 INTERVAL            = 6                # intervall between evaluations in hours
 STOP_LIMIT          = 0.96             # if total drops below STOP_LIMIT * maximum, then STOP
+ALLOW_RATING        = true
 
 # array constants
 PREFER = String[]

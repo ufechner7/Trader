@@ -129,7 +129,7 @@ function check(st; prn=true)
     by_hour, by_day = overview(view)
 
     # switch state if required
-    if st.mode == INIT && st.index > DAYS*24*60
+    if st.mode == INIT && st.index > DAYS*24*60 && ALLOW_RATING
         st.mode = RATING
     end
 

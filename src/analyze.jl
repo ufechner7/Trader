@@ -73,8 +73,12 @@ function trade(st; n=0, prn=true)
         end
         if st.stopped
             if j > 60*24*1.5
-                st.mode = MIXED
-                 println("START at ", (st.rel_time)/3600)
+                if ALLOW_RATING
+                    st.mode = MIXED
+                else
+                    st.mode = INIT
+                end
+                println("START at ", (st.rel_time)/3600)
             end
             j += 1
         end
