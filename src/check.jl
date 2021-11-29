@@ -1,6 +1,16 @@
 # the core rountine "check" that checks the courses and buys and sells
 # helper functions on_minute, on_hour, on_some_hours
 
+# helper function
+function amount_to_use(st, view)
+    cash = calc_cash(view, st.tdb)
+    amount = cash
+    if cash >= KEEP
+        amount = MAX_TRADE
+    end
+    amount
+end
+
 function on_minute(st, view, by_hour, prn)
    for row in eachrow(by_hour)
         market = row.MARKET
@@ -10,16 +20,10 @@ function on_minute(st, view, by_hour, prn)
             else
                 rating = market_rating(st.rdb, market)
                 if rating > MIN_RATING # || row.RISE_1h >= MAX_RISE 
-                    cash=calc_cash(view,st.tdb)
-                    if cash >= KEEP
+                    if calc_cash(view,st.tdb) >= KEEP
                         buy(st, view, st.rp_table, market, MAX_TRADE; reason="rating > MIN_RATING")
-                        cash=calc_cash(view,st.tdb)
-                        if cash >= KEEP
-                            if cash >= 0.5*MAX_TRADE && cash < MAX_TRADE
-                                buy(st, view, st.rp_table, market, cash; reason="rating > MIN_RATING")
-                            else
-                                buy(st, view, st.rp_table, market, MAX_TRADE; reason="rating > MIN_RATING")
-                            end
+                        if calc_cash(view,st.tdb) >= KEEP
+                            buy(st, view, st.rp_table, market, amount_to_use(st, view); reason="rating > MIN_RATING")
                         end
                     end
                 end
@@ -47,16 +51,6 @@ function on_hour(st, view, prn)
             end
         end
     end
-end
-
-# helper function
-function amount_to_use(st, view)
-    cash = calc_cash(view, st.tdb)
-    amount = cash
-    if cash >= MAX_TRADE
-        amount = MAX_TRADE
-    end
-    amount
 end
 
 # every INTERVAL hours: evaluate performance during mode INIT, sell and buy
