@@ -1,10 +1,9 @@
 using CSV, DataFrames, PyPlot, Dates, TimeZones, Impute, Statistics, GLM, Parameters
 
 function buy(st, view, rp_table, market, amount; force=false, reason="")
-    global FEE
     subset = filter(row -> row.MARKET == market, st.tdb)
     old_amount = sum(subset.BUY_EUR) - sum(subset.SELL_EUR)
-    cash = calc_cash(view, st.tdb)
+    cash = st.cash
     if (old_amount < 0.01 || force && old_amount <= MAX_TRADE + 0.01) && cash >= amount
         rate = last(view[!, market])
         coins = amount / rate * FEE
@@ -12,6 +11,7 @@ function buy(st, view, rp_table, market, amount; force=false, reason="")
         v = [st.time, st.rel_time/3600, market, 0.0, amount, 0.0, coins, 0.0, 0.0, cash-amount, total, 0.0, reason]
         rel_price_table(view, time, rp_table; ref_market=market)
         push!(st.tdb, v)
+        st.cash -= amount
         return true
     end
     return false
@@ -21,7 +21,7 @@ end
 function sell(st, view, market; reason="")
     subset = filter(row -> row.MARKET == market, st.tdb)
     old_amount = sum(subset.BUY_COINS) - sum(subset.SELL_COINS)
-    cash = calc_cash(view, st.tdb)
+    cash = st.cash
     if old_amount > 0.01
         rate = last(view[!, market])
         # println("Sell: ", market, " rate: ", rate)
@@ -29,6 +29,7 @@ function sell(st, view, market; reason="")
         total = calc_total(view, st.tdb)
         v = [st.time, st.rel_time/3600, market, sell_eur, 0.0, old_amount, 0.0, 0.0, 0.0, cash+sell_eur, total, 0.0, reason]
         push!(st.tdb, v)
+        st.cash += sell_eur
     end
 end
 

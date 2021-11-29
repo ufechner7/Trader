@@ -8,6 +8,9 @@ end
 
 function calc_cash(df, tdb)
     cash = 0.0
+    if isnothing(tdb)
+        return START_KAPITAL
+    end
     for row in eachrow(tdb)
         market1 = row.MARKET
         if market1=="DEPOSIT"

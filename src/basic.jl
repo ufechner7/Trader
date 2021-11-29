@@ -8,6 +8,7 @@ const NoDataFrame = Union{Nothing, DataFrame}
    t0                =  0                  # start time [s]
    index             =  1                  # last index of the input data frame
    wait              =  60                 # number of seconds to wait before trading
+   cash::Float64     = START_KAPITAL
    mode::Mode        = INIT
    df::NoDataFrame              = nothing  # input data frame
    tdb::NoDataFrame             = nothing  # trading data base
