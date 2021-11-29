@@ -19,9 +19,9 @@ function list_markets(tdb, all=false)
     final_markets
 end
 
-function get_tdb(st)
+function get_tdb(st; prn=false)
     if isnothing(st.tdb)
-        tdb = trade(st; prn=false)
+        tdb = trade(st; prn=prn)
         st.tdb=tdb
     else
         tdb=st.tdb

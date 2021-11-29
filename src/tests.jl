@@ -15,7 +15,7 @@ function test2(st)
 end
 
 function test3(st; plot=false, prn=false)
-    tdb=get_tdb(st)
+    tdb=get_tdb(st; prn=prn)
     markets = list_markets(tdb)
     sell_all(st, st.df, markets; reason="final sails")
 
