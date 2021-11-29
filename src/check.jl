@@ -99,7 +99,7 @@ function on_some_hours(st, view, prn)
         if ! (market in best_markets)
             # SELL 
             if prn println("Selling: ", market) end
-            sell(st, view, market; reason="last(perf.PERF) < 1.0 " * string(round(last(perf.PERF),digits=3)))
+            sell(st, view, market; reason="not in best_markets" )
             
             # BUY
             if prn println(top_ratings) end
