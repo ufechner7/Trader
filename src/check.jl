@@ -95,9 +95,8 @@ function on_some_hours(st, view, prn)
         if prn println(perf) end
         market = last(perf.MARKET)
         
-        # best_markets = (first(sort(rp_table, [:REL_PRIZE], rev=true),6)).MARKET
-        # if ! (market in best_markets)
-        if last(perf.PERF) < 1.0
+        best_markets = (first(sort(st.rp_table, [:REL_PRIZE], rev=true), 3)).MARKET
+        if ! (market in best_markets)
             # SELL 
             if prn println("Selling: ", market) end
             sell(st, view, market; reason="last(perf.PERF) < 1.0 " * string(round(last(perf.PERF),digits=3)))
