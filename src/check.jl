@@ -12,13 +12,19 @@ function amount_to_use(st, view)
 end
 
 function on_minute(st, view, by_hour, prn)
-   for row in eachrow(by_hour)
+    # apply exponential decay on extra rating
+    for (market, value) in st.δ_rating
+        st.δ_rating[market] *= exp(-1/TAU)
+    end
+   
+    for row in eachrow(by_hour)
         market = row.MARKET
         if ! st.stopped && row.RISE_1h >= MAX_RISE 
+            st.δ_rating[market]=EXTRA_RATING
             if st.mode == INIT  
                 buy(st, view, st.rp_table, market, MAX_TRADE; reason="RISE_1h >= MAX_RISE")
             else
-                rating = market_rating(st.rdb, market)
+                rating = market_rating(st.rdb, market) + EXTRA_RATING
                 if rating > MIN_RATING # || row.RISE_1h >= MAX_RISE 
                     if calc_cash(view,st.tdb) >= KEEP
                         buy(st, view, st.rp_table, market, MAX_TRADE; reason="rating > MIN_RATING")
@@ -36,8 +42,12 @@ function on_minute(st, view, by_hour, prn)
 end
 
 function on_hour(st, view, prn)
-    st.rdb = rating_table(view, 10000; filter=false)
+    st.rdb = rating_table(st, view, 10000; filter=false)
     update_total(st, view, st.time)
+
+    # println(st.rel_time/3600)
+    # println(st.δ_rating)
+    # println()
 
     if st.mode in (MIXED, RATING, STOPPED)
         perf = find_performance(view, st.tdb, st.time, st.rdb)
@@ -58,7 +68,7 @@ end
 # every INTERVAL hours: evaluate performance during mode INIT, sell and buy
 function on_some_hours_init(st, view, prn)
     perf = find_performance(view, st.tdb, st.time, st.rdb)
-    top_ratings = rating_table(view, 8, filter=false) # not used for decision making
+    top_ratings = rating_table(st, view, 8, filter=false) # not used for decision making
     
     if ! isnothing(perf)
         sort!(perf, [:PERF], rev=true)
@@ -84,7 +94,7 @@ end
 # every INTERVAL hours: evaluate performance when rating is available, sell and buy
 function on_some_hours(st, view, prn)
     perf = find_performance(view, st.tdb, st.time, st.rdb)
-    top_ratings = rating_table(view, 8, filter=false)
+    top_ratings = rating_table(st, view, 8; filter=false, extra_rating=true)
     
     if ! isnothing(perf)
         sort!(perf, [:PERF], rev=true)

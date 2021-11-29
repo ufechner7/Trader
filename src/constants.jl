@@ -11,8 +11,8 @@ const MIN_DROP_24   = -35.0            # sell if DROP_24h goes below this value 
 const DAYS          = 4                # number of days to wait for valid rating
 MIN_RATING          = 20               # minimal rating to buy a coin; 
 MAX_RATING          = 0.75*MIN_RATING  # maximal rating to sell a coin
-EXTRA_RATING        = 10.0             # extra rating for fast rise
-DECAY               = 60               # time constant for decay of extra rating
+EXTRA_RATING        = 0.0             # extra rating for fast rise
+TAU                 = 60               # time constant for decay of extra rating
 INTERVAL            = 6                # intervall between evaluations in hours
 STOP_LIMIT          = 0.96             # if total drops below STOP_LIMIT * maximum, then STOP
 

@@ -27,7 +27,7 @@ function subrating(df, n, interest_function)
     return interest, deviance1, delta
 end
 
-function rating_table(df, m=8; filter=true)
+function rating_table(st, df, m=8; filter=true, extra_rating=false)
     n = min(60*24*4, size(df)[1])
     # create view on the last four days or less, if less than 4 days of data available
     interest_4d, deviance_4d, delta_4d = subrating(df, n, weekly_interest)
@@ -39,8 +39,13 @@ function rating_table(df, m=8; filter=true)
     rating2 = 100*(interest_4d./max.(deviance_4d, 10.0)./10.0 .+ 0.00.*interest_1d./max.(deviance_1d, 10.0))
     final_rating = 4*(interest_4d./(3.162.*sqrt.(max.(deviance_4d, 10.0)./10)) .+ 0.00.*interest_1d./max.(deviance_1d, 10.0))
     for i in 1:length(final_rating)
-        if interest_1d[i] < -60.0
-            # final_rating[i] = -100.0
+         if extra_rating
+            market = markets[i]
+            extra = 0.0
+            if haskey(st.δ_rating, market)
+                extra = st.δ_rating[market]
+            end
+            final_rating[i] += extra
         end
     end
     res = DataFrame(MARKET = markets, MONTHLY_INTEREST_4d = interest_4d, DEVIANCE_4d = deviance_4d, DELTA_4d = delta_4d, WEEKLY_INTEREST_1d = interest_1d, DEVIANCE_1d = deviance_1d, DELTA_1d = delta_1d, RATING=final_rating, RATING2=rating2)
