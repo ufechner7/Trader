@@ -100,30 +100,13 @@ function on_some_hours(st, view, prn)
         if last(perf.PERF) < 1.0
             # SELL 
             if prn println("Selling: ", market) end
-            sell(st, view, market; reason="last(perf.PERF) < 1.0 "*string(round(last(perf.PERF),digits=3)))
+            sell(st, view, market; reason="last(perf.PERF) < 1.0 " * string(round(last(perf.PERF),digits=3)))
             
-            markets = (top_ratings.MARKET)
+            # BUY
             if prn println(top_ratings) end
-            
-            cash = calc_cash(view, st.tdb)
-            amount_to_use = cash
-            if cash >= MAX_TRADE
-                amount_to_use = MAX_TRADE
-            end
-            i = 1
-            for market in markets   
-                flag = false
-                if st.mode in (MIXED, RATING, STOPPED)
-                    rating = market_rating(st.rdb, market)
-                    flag = rating > MIN_RATING 
-                else 
-                    performance = rel_price(st.rp_table, market)
-                    if performance > 1.01
-                        flag = true
-                    end
-                    flag = true          
-                end
-                if ! st.stopped && flag && buy(st, view, st.rp_table, market, amount_to_use; force=true, reason="every 12h: time < 4d or rating_ >= rating(st.rdb, market)")
+            for market in top_ratings.MARKET   
+                flag =  market_rating(st.rdb, market) > MIN_RATING 
+                if ! st.stopped && flag && buy(st, view, st.rp_table, market, amount_to_use(st, view); force=true, reason="every 12h: rating > MIN_RATING")
                     if prn println("Buying: ", market, " time: ", (st.rel_time)/3600) end
                     if calc_cash(view, st.tdb) < 0.5 * MAX_TRADE break end                      
                 end
