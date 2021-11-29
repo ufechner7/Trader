@@ -18,12 +18,13 @@ end
 function on_minute(st, view, by_hour, prn)
     for row in eachrow(by_hour)
         market = row.MARKET
+        cash = calc_cash(view, st.tdb)
         if ! st.stopped && row.RISE_1h >= MAX_RISE 
             st.δ_rating[market]=EXTRA_RATING
-            buy(st, view, st.rp_table, market, MAX_TRADE; reason="RISE_1h >= MAX_RISE")
+            buy(st, view, st.rp_table, market, MAX_TRADE; cash=cash, reason="RISE_1h >= MAX_RISE")
         end
         if row.DROP_1h < MIN_DROP || row.DROP_24h < MIN_DROP_24
-            sell(st, view, market; reason="row.DROP_1h < MIN_DROP || row.DROP_24h < MIN_DROP_24")
+            sell(st, view, market; cash=cash, reason="row.DROP_1h < MIN_DROP || row.DROP_24h < MIN_DROP_24")
         end
     end
 end
