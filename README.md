@@ -34,7 +34,7 @@ https://sdobber.github.io/FA_LSTNet/
         
 
 ### TODO
-1. extend rel_prices
+1. add delta_rating with decay
 
 1. add plot of course and rating of one market
 3. add rel_price to the bookings table; relative to t=0 when buying first, relative to buying when selling, relative to selling when buying second 
