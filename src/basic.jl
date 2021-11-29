@@ -12,9 +12,9 @@ const NoDataFrame = Union{Nothing, DataFrame}
    df::NoDataFrame              = nothing  # input data frame
    tdb::NoDataFrame             = nothing  # trading data base
    rdb::NoDataFrame             = nothing  # rating data base
+   mdb::NoDataFrame             = nothing  # database of the active markets as function of time
    rp_table::NoDataFrame        = nothing  # prices relative to buying time
    δ_rating::Dict{String, Float64}= Dict() # extra rating points per market due to fast rise
-   markets::Vector{String}      = []       # currently owned coins
 end
 
 function State(df)

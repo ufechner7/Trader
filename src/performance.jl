@@ -39,7 +39,10 @@ function rating_table(st, df, m=8; filter=true, extra_rating=false)
     rating2 = 100*(interest_4d./max.(deviance_4d, 10.0)./10.0 .+ 0.00.*interest_1d./max.(deviance_1d, 10.0))
     final_rating = 4*(interest_4d./(3.162.*sqrt.(max.(deviance_4d, 10.0)./10)) .+ 0.00.*interest_1d./max.(deviance_1d, 10.0))
     for i in 1:length(final_rating)
-         if extra_rating
+        if final_rating[i] > MAX_RATING
+             final_rating[i] = MAX_RATING
+        end
+        if extra_rating
             market = markets[i]
             extra = 0.0
             if haskey(st.δ_rating, market)
