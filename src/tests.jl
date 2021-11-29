@@ -59,11 +59,10 @@ function test4(st)
 end
 
 function test5(st)
-    global WAIT
     totals = Float64[]
     for i in 1:46
-        WAIT = i*60
-        tdb=trade(st, prn=false)
+        st.wait = i*60
+        tdb = trade(st, prn=false)
         push!(totals, last(tdb.TOTAL))
         println(last(tdb.TOTAL))
     end
