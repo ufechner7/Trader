@@ -5,35 +5,22 @@
 function amount_to_use(st, view)
     cash = calc_cash(view, st.tdb)
     amount = cash
-    if cash >= KEEP
+    if cash >= MAX_TRADE+KEEP
         amount = MAX_TRADE
+    elseif cash > KEEP
+        amount = cash - KEEP
+    else
+        amount = 0.0
     end
     amount
 end
 
 function on_minute(st, view, by_hour, prn)
-    # apply exponential decay on extra rating
-    for (market, value) in st.δ_rating
-        st.δ_rating[market] *= exp(-1/TAU)
-    end
-   
     for row in eachrow(by_hour)
         market = row.MARKET
         if ! st.stopped && row.RISE_1h >= MAX_RISE 
             st.δ_rating[market]=EXTRA_RATING
-            if st.mode == INIT  
-                buy(st, view, st.rp_table, market, MAX_TRADE; reason="RISE_1h >= MAX_RISE")
-            else
-                rating = market_rating(st.rdb, market) + EXTRA_RATING
-                if rating > MIN_RATING # || row.RISE_1h >= MAX_RISE 
-                    if calc_cash(view,st.tdb) >= KEEP
-                        buy(st, view, st.rp_table, market, MAX_TRADE; reason="rating > MIN_RATING")
-                        if calc_cash(view,st.tdb) >= KEEP
-                            buy(st, view, st.rp_table, market, amount_to_use(st, view); reason="rating > MIN_RATING")
-                        end
-                    end
-                end
-            end            
+            buy(st, view, st.rp_table, market, MAX_TRADE; reason="RISE_1h >= MAX_RISE")
         end
         if row.DROP_1h < MIN_DROP || row.DROP_24h < MIN_DROP_24
             sell(st, view, market; reason="row.DROP_1h < MIN_DROP || row.DROP_24h < MIN_DROP_24")
@@ -44,25 +31,6 @@ end
 function on_hour(st, view, prn)
     st.rdb = rating_table(st, view, 10000; filter=false)
     update_total(st, view, st.time)
-
-    # println(st.rel_time/3600)
-    # println(st.δ_rating)
-    # println()
-
-    if st.mode in (MIXED, RATING, STOPPED)
-        perf = find_performance(view, st.tdb, st.time, st.rdb)
-        best_markets = (first(sort(st.rp_table, [:REL_PRIZE], rev=true), 5)).MARKET
-        
-        if ! isnothing(perf)
-            for row in eachrow(perf)
-                market = row.MARKET
-                if ! (market in best_markets)  
-                    if prn println("==> Sell: ", market) end
-                    sell(st, view, market; reason="not in 5 best_markets")
-                end
-            end
-        end
-    end
 end
 
 # every INTERVAL hours: evaluate performance during mode INIT, sell and buy
