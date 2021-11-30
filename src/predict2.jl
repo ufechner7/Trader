@@ -2,11 +2,28 @@ using Plots
 using Statistics 
 using Flux
 
+include("create_training_data.jl")
+db = load_training_db()
+
 # Auxiliary functions for generating our data
 function generate_real_data(n)
     x1 = rand(1,n) .- 0.5
     x2 = (x1 .* x1)*3 .+ randn(1,n)*0.1
     return vcat(x1,x2)
+end
+
+function generate_real_data2(db, n)
+    view = filter(:BUY => ==(true), db)
+    x1 = view.RISE_1h[1:n]
+    x2 = view.RISE_24h[1:n]
+    return vcat(x1', x2')
+end
+
+function generate_fake_data2(db, n)
+    view = filter(:BUY => ==(false), db)
+    x1 = view.RISE_1h[1:n]
+    x2 = view.RISE_24h[1:n]
+    return vcat(x1', x2')
 end
 
 function generate_fake_data(n)
