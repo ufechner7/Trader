@@ -1,7 +1,8 @@
 using Plots
 using Statistics 
+using Flux
 
-#Auxiliary functions for generating our data
+# Auxiliary functions for generating our data
 function generate_real_data(n)
     x1 = rand(1,n) .- 0.5
     x2 = (x1 .* x1)*3 .+ randn(1,n)*0.1
@@ -24,3 +25,36 @@ fake = generate_fake_data(train_size)
 # Visualizing
 scatter(real[1,1:500],real[2,1:500])
 scatter!(fake[1,1:500],fake[2,1:500])
+
+function NeuralNetwork()
+    Chain(
+        Dense(2, 25, relu),
+        Dense(25, 1, x->σ.(x))
+    )
+end
+
+# Organizing the data in batches
+X    = hcat(real, fake)
+Y    = vcat(ones(train_size), zeros(train_size))
+data = Flux.Data.DataLoader((X, Y'), batchsize=100, shuffle=true)
+
+# Defining our model, optimization algorithm and loss function
+m    = NeuralNetwork()
+opt  = Descent(0.05)
+loss(x, y) = sum(Flux.Losses.binarycrossentropy(m(x), y))
+
+# Organizing the data in batches
+X    = hcat(real, fake)
+Y    = vcat(ones(train_size), zeros(train_size))
+data = Flux.Data.DataLoader((X, Y'), batchsize=100, shuffle=true)
+
+# Training
+ps = Flux.params(m)
+epochs = 20
+for i in 1:epochs
+    Flux.train!(loss, ps, data, opt)
+end
+println(mean(m(real)), " ", mean(m(fake))) # print model prediction
+
+scatter( real[1, 1:100], real[2, 1:100], zcolor=m(real)')
+scatter!(fake[1, 1:100], fake[2, 1:100], zcolor=m(fake)', legend=false)

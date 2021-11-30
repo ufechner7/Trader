@@ -2,6 +2,8 @@ PREDICT = 24   # number of hours to predict
 MINRISE = 10.0 # min rise over PREDICT hours to trigger buying 
 MARKETS = ["LTO_EUR","AVAX_EUR","ATA_EUR","CHR_EUR","MANA_EUR","SAND_EUR"]
 
+# TODO split the data in real and fake data (good and bad data sets)
+
 function create_training_db(st)
     df = nothing
     for st.index in 1:(size(st.df)[1] - PREDICT*60)
