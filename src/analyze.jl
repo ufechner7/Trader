@@ -107,6 +107,7 @@ include("plotting.jl")
 include("logging.jl")
 
 st = State(read_log(logfiles()))
+nothing
 # main(st)
 
 # p1 = plot(df.BTC_EUR, label="BTC_EUR")
