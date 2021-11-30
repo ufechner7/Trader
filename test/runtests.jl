@@ -26,9 +26,28 @@ function calc_cash1(tdb::DataFrame)
     cash
 end
 
+function calc_total1(df, tdb)
+    total::Float64 = last(tdb.CASH)
+    for row in eachrow(tdb)
+        market = row.MARKET
+        if market!="DEPOSIT" && market != ""
+            rate = last(df[!, market])
+            total+=(row.BUY_COINS - row.SELL_COINS) * rate
+        end
+    end
+    return total
+end
+
 # buy(st, view, rp_table, market, amount; force=false, reason="")
 
-@test calc_cash(st.tdb) == calc_cash1(st.tdb)
+@testset "untils.jl" begin
+    @test calc_cash(st.tdb) == calc_cash1(st.tdb)
+    @test calc_total(st.df, st.tdb) ≈ calc_total1(st.df, st.tdb)
+end
 
 @btime calc_cash($st.tdb)  #  1.7 μs
 @btime calc_cash1($st.tdb) # 37.6 μs
+
+@btime calc_total($st.df, $st.tdb)  # 11 μs
+@btime calc_total1($st.df, $st.tdb) # 44 μs
+nothing

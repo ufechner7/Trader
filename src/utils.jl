@@ -19,16 +19,20 @@ function calc_cash(tdb::DataFrame)
     calc_cash(tdb.MARKET, tdb.SAVE_EUR, tdb.WITHDRAW_EUR, tdb.BUY_EUR, tdb.SELL_EUR)
 end
 
-function calc_total(df, tdb)
-    total = last(tdb.CASH)
-    for row in eachrow(tdb)
-        market = row.MARKET
+function calc_total(df, markets, total, buy_coins, sell_coins)
+    for i in 1:length(markets)
+        market=markets[i]
         if market!="DEPOSIT" && market != ""
-            rate = last(df[!, market])
-            total+=(row.BUY_COINS - row.SELL_COINS) * rate
+            rate::Float64 = last(df[!, market])
+            total += (buy_coins[i] - sell_coins[i]) * rate
         end
-    end
-    return total
+    end  
+    total
+end
+
+function calc_total(df, tdb)
+    total::Float64 = last(tdb.CASH)
+    calc_total(df, tdb.MARKET, total, tdb.BUY_COINS, tdb.SELL_COINS)
 end
 
 # interest in percent, duration in seconds
