@@ -2,8 +2,8 @@
 # helper functions on_minute, on_hour, on_some_hours
 
 # helper function
-function amount_to_use(st, view)
-    cash = calc_cash(view, st.tdb)
+function amount_to_use(st)
+    cash = calc_cash(st.tdb)
     amount = cash
     if cash >= KEEP
         amount = MAX_TRADE
@@ -26,10 +26,10 @@ function on_minute(st, view, by_hour, prn)
             else
                 rating = market_rating(st.rdb, market) + EXTRA_RATING
                 if rating > MIN_RATING # || row.RISE_1h >= MAX_RISE 
-                    if calc_cash(view,st.tdb) >= KEEP
+                    if calc_cash(st.tdb) >= KEEP
                         buy(st, view, st.rp_table, market, MAX_TRADE; reason="rating > MIN_RATING")
-                        if calc_cash(view,st.tdb) >= KEEP
-                            buy(st, view, st.rp_table, market, amount_to_use(st, view); reason="rating > MIN_RATING")
+                        if calc_cash(st.tdb) >= KEEP
+                            buy(st, view, st.rp_table, market, amount_to_use(st); reason="rating > MIN_RATING")
                         end
                     end
                 end
@@ -81,9 +81,9 @@ function on_some_hours_init(st, view, prn)
             sell(st, view, market; reason="last(perf.PERF) < 1.0 " * string(round(last(perf.PERF),digits=3)))
             # BUY
              for market in (first(sort(st.rp_table, [:REL_PRIZE], rev=true), 2)).MARKET            
-                if buy(st, view, st.rp_table, market, amount_to_use(st, view); force=true, reason="every 6h: mode==INIT)")
+                if buy(st, view, st.rp_table, market, amount_to_use(st); force=true, reason="every 6h: mode==INIT)")
                     if prn println("Buying: ", market, " time: ", (st.rel_time)/3600) end
-                    if calc_cash(view, st.tdb) < 0.5 * MAX_TRADE break end              
+                    if calc_cash(st.tdb) < 0.5 * MAX_TRADE break end              
                 end
             end
         end
@@ -111,9 +111,9 @@ function on_some_hours(st, view, prn)
             if prn println(top_ratings) end
             for market in top_ratings.MARKET   
                 flag =  market_rating(st.rdb, market) > MIN_RATING 
-                if ! st.stopped && flag && buy(st, view, st.rp_table, market, amount_to_use(st, view); force=true, reason="every 12h: rating > MIN_RATING")
+                if ! st.stopped && flag && buy(st, view, st.rp_table, market, amount_to_use(st); force=true, reason="every 12h: rating > MIN_RATING")
                     if prn println("Buying: ", market, " time: ", (st.rel_time)/3600) end
-                    if calc_cash(view, st.tdb) < 0.5 * MAX_TRADE break end                      
+                    if calc_cash(st.tdb) < 0.5 * MAX_TRADE break end                      
                 end
             end
         end

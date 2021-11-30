@@ -6,18 +6,31 @@ function seconds2human(delta)
     return Dates.Hour(hours) + Dates.Minute(minutes) + Dates.Second(seconds)
 end
 
-function calc_cash(df, tdb)
+function calc_cash(markets, save_eur, withdraw_eur, buy_eur, sell_eur)
     cash = 0.0
-    for row in eachrow(tdb)
-        market1 = row.MARKET
-        if market1=="DEPOSIT"
-            cash += row.SAVE_EUR - row.WITHDRAW_EUR
-        elseif market1 != ""
-            rate1 = last(df[!, market1])
-            cash -= (row.BUY_EUR - row.SELL_EUR)
-        end
-    end    
+    for i in 1:length(markets)
+        market = markets[i]
+        if market=="DEPOSIT"
+            cash += save_eur[i] - withdraw_eur[i]
+        elseif market != ""
+            cash -= (buy_eur[i] - sell_eur[i])
+        end      
+    end  
     cash
+end
+
+function calc_cash(tdb::DataFrame)
+    cash = 0.0
+    calc_cash(tdb.MARKET, tdb.SAVE_EUR, tdb.WITHDRAW_EUR, tdb.BUY_EUR, tdb.SELL_EUR)
+    # for row in eachrow(tdb)
+    #     market = row.MARKET
+    #     if market=="DEPOSIT"
+    #         cash += row.SAVE_EUR - row.WITHDRAW_EUR
+    #     elseif market != ""
+    #         cash -= (row.BUY_EUR - row.SELL_EUR)
+    #     end
+    # end    
+    # cash
 end
 
 function calc_total(df, tdb)

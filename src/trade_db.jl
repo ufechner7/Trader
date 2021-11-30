@@ -9,6 +9,6 @@ function update_total(st, view, time)
     rating_tab = rating_table(st, view, 10000; filter=false, extra_rating=true)
     top_ratings = (first(sort(rating_tab, [:RATING], rev=true), 8).RATING)
     mean_rating = mean(top_ratings)
-    v = [time, (time-st.t0)/3600, "", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, calc_cash(view, st.tdb), total, mean_rating, "update_total"]
+    v = [time, (time-st.t0)/3600, "", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, calc_cash(st.tdb), total, mean_rating, "update_total"]
     push!(st.tdb, v)    
 end
