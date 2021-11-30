@@ -115,7 +115,7 @@ function check(st; prn=true)
     end
 
     # update rp_table
-    rel_price_table(st.df, st.time, st.rp_table)
+    rel_price_table(view, st.time, st.rp_table)
 
     # every hour
     if mod(st.index, 60) == 0 
