@@ -44,25 +44,6 @@ end
 function on_hour(st, view, prn)
     st.rdb = rating_table(st, view, 10000; filter=false)
     update_total(st, view, st.time)
-
-    # println(st.rel_time/3600)
-    # println(st.δ_rating)
-    # println()
-
-    if st.mode in (MIXED, RATING, STOPPED)
-        perf = find_performance(view, st.tdb, st.time, st.rdb)
-        best_markets = (first(sort(st.rp_table, [:REL_PRIZE], rev=true), 5)).MARKET
-        
-        if ! isnothing(perf)
-            for row in eachrow(perf)
-                market = row.MARKET
-                if ! (market in best_markets)  
-                    if prn println("==> Sell: ", market) end
-                    sell(st, view, market; reason="not in 5 best_markets")
-                end
-            end
-        end
-    end
 end
 
 # every INTERVAL hours: evaluate performance during mode INIT, sell and buy
