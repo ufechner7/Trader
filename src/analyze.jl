@@ -40,8 +40,6 @@ function sell_all(st, view, markets; reason="")
     end
 end
 
-
-
 function trade(st; n=0, prn=true)
     st.mode = INIT
     st.rdb = nothing
