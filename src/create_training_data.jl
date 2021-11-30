@@ -25,5 +25,3 @@ function create_training_db(st)
         end
     end
 end
-
-# jldsave("example.jld2"; x, y, z)
