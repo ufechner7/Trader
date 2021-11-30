@@ -5,23 +5,30 @@ const NoDataFrame = Union{Nothing, DataFrame}
 @enum Mode INIT=1 RATING=2 MIXED=3 STOPPED=4
 
 @with_kw mutable struct State @deftype Int64
-   t0                =  0                  # start time [s]
-   index             =  1                  # last index of the input data frame
-   wait              =  60                 # number of seconds to wait before trading
-   mode::Mode        = INIT
+   logfiles::Vector{String} =  []          # vector of filenames, used as input
+   t0                       =  0           # start time [s]
+   index                    =  1           # last index of the input data frame
+   wait                     =  60          # number of seconds to wait before trading
+   mode::Mode               = INIT
    df::NoDataFrame              = nothing  # input data frame
    tdb::NoDataFrame             = nothing  # trading data base
    rdb::NoDataFrame             = nothing  # rating data base
    mdb::NoDataFrame             = nothing  # database of the active markets as function of time
    rp_table::NoDataFrame        = nothing  # prices relative to buying time
-   δ_rating::Dict{String, Float64}= Dict() # extra rating points per market due to fast rise
+   δ_rating::Dict{String, Float64}= Dict{String, Float64}() # extra rating points per market due to fast rise
 end
 
-function State(df)
+function State(df::DataFrame)
     st=State()
     st.df = df
     st.t0 = first(df.TIME)
     st
+end
+
+function State(logfiles::Vector{String})
+    df = read_log(logfiles)
+    st = State(df)
+    st.logfiles = logfiles
 end
 
 function Base.getproperty(st::State, sym::Symbol)

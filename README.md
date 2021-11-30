@@ -34,6 +34,9 @@ https://sdobber.github.io/FA_LSTNet/
         
 
 ### TODO
+1. create new data fram with the colums
+time, rise1h, rise24h, future_rise24h, buy
+
 1. create new data frame with the colums
 time active_markets_array
 

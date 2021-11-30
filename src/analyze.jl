@@ -1,4 +1,4 @@
-using CSV, DataFrames, PyPlot, Dates, TimeZones, Impute, Statistics, GLM, Parameters
+using CSV, DataFrames, PyPlot, Dates, TimeZones, Impute, Statistics, GLM, Parameters, JLD2
 
 function buy(st, view, rp_table, market, amount; force=false, reason="")
     subset = filter(row -> row.MARKET == market, st.tdb)
@@ -103,8 +103,10 @@ include("utils.jl")
 include("tests.jl")
 include("plotting.jl")
 include("logging.jl")
+include("create_training_data.jl")
 
-st = State(read_log(logfiles()))
+st = load_state()
+# st = State(logfiles())
 nothing
 # main(st)
 

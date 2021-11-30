@@ -1,16 +1,15 @@
-using BenchmarkTools, Test, DataFrames, CSV, Dates, TimeZones, Impute, Parameters
+using BenchmarkTools, Test, DataFrames, CSV, Dates, TimeZones, Impute, Parameters, JLD2
 
+println("Loading code...")
 include("../src/utils.jl")
 include("../src/logging.jl")
 include("../src/basic.jl")
 include("../src/tests.jl")
 
 if ! @isdefined st
-    st = State(read_log(logfiles()))
-end
-if isnothing(st.tdb)
     include("../src/analyze.jl")
-    test3(st)
+    println("Loading data...")
+    st = load_object("status.jld2")
 end
 
 function calc_cash1(tdb::DataFrame)
@@ -45,9 +44,11 @@ end
     @test calc_total(st.df, st.tdb) ≈ calc_total1(st.df, st.tdb)
 end
 
-@btime calc_cash($st.tdb)  #  1.7 μs
-@btime calc_cash1($st.tdb) # 37.6 μs
+if false
+    @btime calc_cash($st.tdb)  #  1.7 μs
+    @btime calc_cash1($st.tdb) # 37.6 μs
 
-@btime calc_total($st.df, $st.tdb)  # 11 μs
-@btime calc_total1($st.df, $st.tdb) # 44 μs
+    @btime calc_total($st.df, $st.tdb)  # 11 μs
+    @btime calc_total1($st.df, $st.tdb) # 44 μs
+end
 nothing

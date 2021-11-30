@@ -10,12 +10,12 @@ const MIN_DROP      = -25.0            # sell if DROP_1h goes below this value [
 const MIN_DROP_24   = -35.0            # sell if DROP_24h goes below this value [%]
 const DAYS          = 4                # number of days to wait for valid rating
 MIN_RATING          = 25.0             # minimal rating to buy a coin; 
-MAX_RATING          = 15.0
-EXTRA_RATING        = 0.0              # extra rating for fast rise was: 12.5
+MAX_RATING          = 20.0
+EXTRA_RATING        = 12.5              # extra rating for fast rise was: 12.5
 TAU                 = 180              # time constant for decay of extra rating
 INTERVAL            = 12                # intervall between evaluations in hours
-STOP_LIMIT          = 0.85             # if total drops below STOP_LIMIT * maximum, then STOP
-ALLOW_RATING        = false
+STOP_LIMIT          = 0.96             # if total drops below STOP_LIMIT * maximum, then STOP
+ALLOW_RATING        = true
 
 # array constants
 PREFER = String[]
