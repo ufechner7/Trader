@@ -28,3 +28,11 @@ function create_training_db(st)
     end
     return df
 end
+
+function save_training_db(db)
+    jldsave("training_db.jld2"; db)
+end
+
+function load_training_db()
+    load_object("training_db.jld2")
+end
