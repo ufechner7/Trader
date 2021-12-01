@@ -1,6 +1,7 @@
 using Plots
 using Statistics 
 using Flux
+using FeatureTransforms
 
 include("create_training_data.jl")
 db = load_training_db()
@@ -24,6 +25,26 @@ function generate_fake_data2(db, n)
     x1 = view.RISE_1h[1:n]
     x2 = view.RISE_24h[1:n]
     return vcat(x1', x2')
+end
+
+function read_data(db, n)
+    view = filter(:BUY => ==(true), db)
+    rd1 = view.RISE_1h[1:n]
+    rd2 = view.RISE_24h[1:n]
+    rd = vcat(rd1', rd2')
+    view = filter(:BUY => ==(false), db)
+    fd1 = view.RISE_1h[1:n]
+    fd2 = view.RISE_24h[1:n]
+    fd = vcat(fd1', fd2')
+    data_1h = vcat(rd1', fd1')
+    data_24h = vcat(rd2', fd2')
+    scaling_1h = MeanStdScaling(data_1h)
+    scaling_24h = MeanStdScaling(data_24h)
+    FeatureTransforms.apply!(data_1h, scaling_1h)
+    FeatureTransforms.apply!(data_24h, scaling_24h)
+    rd = vcat(data_1h[1,:]', data_24h[1,:]')
+    fd = vcat(data_1h[2,:]', data_24h[2,:]')
+    rd, fd, scaling_1h, scaling_24h
 end
 
 function generate_fake_data(n)
