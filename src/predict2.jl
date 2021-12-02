@@ -56,18 +56,20 @@ function generate_fake_data(n)
 end
 
 # Creating our data
-train_size = 5000
-real = generate_real_data(train_size)
-fake = generate_fake_data(train_size)
+train_size = 27000
+# real = generate_real_data(train_size)
+# fake = generate_fake_data(train_size)
+real, fake, scaling_1h, scaling_24h = read_data(db, train_size)
 
 # Visualizing
-scatter(real[1,1:500],real[2,1:500])
-scatter!(fake[1,1:500],fake[2,1:500])
+# scatter(real[1,1:500],real[2,1:500])
+# scatter!(fake[1,1:500],fake[2,1:500])
 
+nodes = 200
 function NeuralNetwork()
     Chain(
-        Dense(2, 25, relu),
-        Dense(25, 1, x->σ.(x))
+        Dense(2, nodes, relu),
+        Dense(nodes, 1, x->σ.(x))
     )
 end
 
@@ -86,13 +88,19 @@ X    = hcat(real, fake)
 Y    = vcat(ones(train_size), zeros(train_size))
 data = Flux.Data.DataLoader((X, Y'), batchsize=100, shuffle=true)
 
+# cb =    Flux.throttle(() -> println("training"), 1)
+cb =    Flux.throttle(() -> println(mean(m(real)), " ", mean(m(fake))), 1)
+
+
 # Training
 ps = Flux.params(m)
-epochs = 20
+epochs = 200
 for i in 1:epochs
-    Flux.train!(loss, ps, data, opt)
+    Flux.train!(loss, ps, data, opt, cb=cb)
 end
 println(mean(m(real)), " ", mean(m(fake))) # print model prediction
 
-scatter( real[1, 1:100], real[2, 1:100], zcolor=m(real)')
-scatter!(fake[1, 1:100], fake[2, 1:100], zcolor=m(fake)', legend=false)
+k=1000
+n=500
+scatter( real[1, k:n+k], real[2, k:n+k], zcolor=m(real)')
+scatter!(fake[1, k:n+k], fake[2, k:n+k], zcolor=m(fake)', legend=false)
