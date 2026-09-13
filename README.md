@@ -1,6 +1,6 @@
 # Monitor and trading crypto coins
 
-# new packages
+# New packages
 FluxArchitectures
 
 ## Links
