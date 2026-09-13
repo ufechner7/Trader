@@ -1,8 +1,8 @@
 using PyCall, Printf
 
-# TODO: 
-# 1. refactoring (functions plus main)
-# 2. write a function that reads all markets
+# TODO:
+# add function store_ref that saves the current prices
+# add function read_ref that reads the reference prices
 
 bi = pyimport("python_bitvavo_api.bitvavo")
 

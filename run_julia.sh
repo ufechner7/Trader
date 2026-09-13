@@ -1,9 +1,8 @@
  #!/usr/bin/env bash
  
 source ./init.sh
-if test -f "MakieSys.so"; then
-    julia -J MakieSys.so --project 
+if test -f "MakieSysdev.so"; then
+    julia -t auto -J MakieSysdev.so --project 
 else
-    julia --optimize=1 --project
+    julia -t auto --optimize=1 --project
 fi
-
