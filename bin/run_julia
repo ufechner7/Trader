@@ -7,7 +7,7 @@
 set -euo pipefail
 
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
-source ./init.sh
+# source ./init.sh
 
 export JULIA_DEPOT_PATH="$HOME/.julia-depot-1.7"
 
