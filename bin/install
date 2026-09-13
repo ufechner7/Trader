@@ -10,6 +10,16 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
 export JULIA_DEPOT_PATH="$HOME/.julia-depot-1.7"
 
+if ! command -v juliaup > /dev/null; then
+    echo "Error: juliaup not found. Install it from https://github.com/JuliaLang/juliaup" >&2
+    exit 1
+fi
+
+if ! julia +1.7.0 --version > /dev/null 2>&1; then
+    echo "Julia 1.7.0 not found, installing via juliaup ..."
+    juliaup add 1.7.0
+fi
+
 if test -f "Manifest.toml"; then
     echo "Backing up existing Manifest.toml to Manifest.toml.bak ..."
     mv Manifest.toml Manifest.toml.bak
