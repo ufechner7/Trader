@@ -1,7 +1,10 @@
 # Monitor and trading crypto coins
 
-# New packages
-FluxArchitectures
+## Run basic example
+
+```julia
+include("src/predict.jl")
+```
 
 ## Links
 https://docs.bitvavo.com/
