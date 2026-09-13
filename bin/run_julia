@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# Launch Julia 1.7.0 for this project using the isolated depot at
+# ~/.julia-depot-1.7 (required because FluxArchitectures/Flux/CUDA only
+# resolve under Julia 1.7). Runs with --startup-file=no so the global
+# startup.jl (which auto-loads KaimonGate and Revise) is never sourced.
+
+set -euo pipefail
+
+cd "$(dirname "${BASH_SOURCE[0]}")/.."
+source ./init.sh
+
+export JULIA_DEPOT_PATH="$HOME/.julia-depot-1.7"
+
+if test -f "MakieSysdev.so"; then
+    exec julia +1.7.0 --startup-file=no -t auto -J MakieSysdev.so --project
+else
+    exec julia +1.7.0 --startup-file=no -t auto --optimize=1 --project
+fi
