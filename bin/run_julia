@@ -11,8 +11,11 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
 export JULIA_DEPOT_PATH="$HOME/.julia-depot-1.7"
 
+# Defines menu() in the REPL, which opens the script menu from examples/menu.jl.
+INIT='menu() = include("examples/menu.jl"); println("Type menu() to select a script to run.")'
+
 if test -f "MakieSysdev.so"; then
-    exec julia +1.7.0 --startup-file=no -t auto -J MakieSysdev.so --project
+    exec julia +1.7.0 --startup-file=no -t auto -J MakieSysdev.so --project -i -e "$INIT"
 else
-    exec julia +1.7.0 --startup-file=no -t auto --optimize=1 --project
+    exec julia +1.7.0 --startup-file=no -t auto --optimize=1 --project -i -e "$INIT"
 fi
