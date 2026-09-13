@@ -1,5 +1,8 @@
 # Monitor and trading crypto coins
 
+# new packages
+FluxArchitectures
+
 ## Links
 https://docs.bitvavo.com/
 
@@ -58,7 +61,7 @@ time active_markets_array
 
 ### DONE
 1. write a script that monitors the price of n coins once per 5s
-2. create Bitbucket repo
+2. create GitHub repo
 3. follow tutorial on prediction
 4. implement recording of market data
 5. add script analyze.jl
