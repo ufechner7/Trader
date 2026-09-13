@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Set up the project environment for Julia 1.7.0: copy the committed default
+# Manifest into place and instantiate it using the isolated depot at
+# ~/.julia-depot-1.7 (required because FluxArchitectures/Flux/CUDA only
+# resolve under Julia 1.7).
+
+set -euo pipefail
+
+cd "$(dirname "${BASH_SOURCE[0]}")/.."
+
+export JULIA_DEPOT_PATH="$HOME/.julia-depot-1.7"
+
+if test -f "Manifest.toml"; then
+    echo "Backing up existing Manifest.toml to Manifest.toml.bak ..."
+    mv Manifest.toml Manifest.toml.bak
+fi
+
+echo "Using default Manifest.toml ..."
+cp Manifest.toml.default Manifest.toml
+
+echo "Instantiating project ..."
+julia +1.7.0 --startup-file=no --project -e 'using Pkg; Pkg.instantiate(); Pkg.precompile(); Pkg.status()'
